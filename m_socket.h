@@ -23,7 +23,6 @@ typedef enum {
 
 typedef struct {
    int socketfd;
-   char host[INET_ADDRSTRLEN];
 } m_socket;
 
 int socket_create(m_socket* socket, domain domain, type type);

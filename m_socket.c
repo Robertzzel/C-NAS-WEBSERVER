@@ -2,10 +2,12 @@
 // Created by robert on 6/14/24.
 //
 
+#include <openssl/err.h>
 #include "m_socket.h"
 
 int socket_create(m_socket* m_socket, domain domain, type type){
     m_socket->socketfd = socket(domain, type, 0);
+    setsockopt(m_socket->socketfd, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int));
     return m_socket->socketfd < 0;
 }
 
@@ -24,8 +26,6 @@ int socket_connect(m_socket* m_socket, const char* host, int port){
     if (connect(m_socket->socketfd, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
         return 1;
     }
-
-    inet_ntop(AF_INET, &(addr.sin_addr), m_socket->host, INET_ADDRSTRLEN);
     return 0;
 }
 
@@ -60,8 +60,6 @@ int socket_accept(m_socket* listening_socket, m_socket* new_socket){
     socklen_t socket_address_length;
     struct sockaddr_in client_addr;
     new_socket->socketfd = accept(listening_socket->socketfd, (struct sockaddr*)&client_addr, &socket_address_length);
-
-    inet_ntop(AF_INET, &(client_addr.sin_addr), new_socket->host , INET_ADDRSTRLEN);
     return 0;
 }
 

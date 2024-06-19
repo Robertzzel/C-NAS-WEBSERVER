@@ -1,30 +1,99 @@
-#include "m_socket.h"
+#include "s_socket.h"
+#include <pthread.h>
+
+int PORT = 8001;
+const char host[] = "127.0.0.1";
+
+void* myThreadFun(void *vargp)
+{
+    s_socket s;
+    int err = s_socket_create(&s, IPv4, STREAM);
+    if(err != 0){
+        printf("server: cannot create socket");
+        return NULL;
+    }
+    printf("server - Socket created\n");
+
+    int port = PORT;
+    err = s_socket_bind(&s, host, port);
+    if(err != 0){
+        printf("server: cannot bind socket");
+        return NULL;
+    }
+    printf("server - Socket binded\n");
+
+    err = s_socket_listen(&s, 1);
+    if(err != 0){
+        printf("server: cannot listen socket");
+        return NULL;
+    }
+    printf("server - Socket listening\n");
+
+    s_socket client;
+    err = s_socket_accept(&s, &client);
+    if(err != 0){
+        printf("server: cannot accept socket");
+        return NULL;
+    }
+    printf("server - Socket accepted\n");
+
+    char buffer[1024] = "hello2";
+    int buff_size = strlen(buffer);
+    err = s_socket_write(&client, (uint8_t*)buffer, buff_size, NULL);
+    if(err != 0){
+        printf("server: cannot write socket");
+        return NULL;
+    }
+
+    int read;
+    err = s_socket_read(&client, (uint8_t*)buffer, 1024, &read);
+    if(err != 0){
+        printf("server: cannot write socket");
+        return NULL;
+    }
+    buffer[read] = '\0';
+    printf("SERVER: MESSAGE: %s\n", buffer);
+    return NULL;
+}
 
 int main() {
-    int err;
-    m_socket s;
-    err = socket_create(&s, IPv4, STREAM);
+    pthread_t thread_id;
+    printf("Before Thread\n");
+    pthread_create(&thread_id, NULL, myThreadFun, NULL);
+    printf("Thread created\n");
+
+    sleep(1);
+    s_socket s;
+    int err = s_socket_create(&s, IPv4, STREAM);
     if(err != 0){
+        printf("client: cannot create socket");
         return 1;
     }
 
-    err = socket_connect(&s, "127.0.0.1", 8000);
+    int port = PORT;
+    err = s_socket_connect(&s, host, port);
     if(err != 0){
+        printf("client: cannot connect socket\n");
         return 1;
     }
 
-    char buffer[1024] = "hello";
-    uint64_t read;
-    socket_read(&s, (uint8_t*)buffer, 1024, &read);
+    char buffer[1024];
+    int read;
+    err = s_socket_read(&s, (uint8_t*)buffer, 1024, &read);
+    if(err != 0){
+        printf("client: cannot read socket");
+        return 1;
+    }
     buffer[read] = '\0';
-    socket_write(&s, (uint8_t*)buffer, strlen(buffer), NULL);
+    printf("client: MESSAGE: %s\n", buffer);
 
-    printf("Message: %s", buffer);
-
-    err = socket_close(&s);
+    memcpy(buffer, "hello_c", 8);
+    int b_size = strlen(buffer);
+    err = s_socket_write(&s, (uint8_t*)buffer, b_size, &read);
     if(err != 0){
+        printf("client: cannot write socket");
         return 1;
     }
 
-    return 0;
+    pthread_join(thread_id, NULL);
 }
