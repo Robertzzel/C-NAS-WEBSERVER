@@ -5,14 +5,35 @@
 #ifndef UNTITLED_S_SOCKET_H
 #define UNTITLED_S_SOCKET_H
 
-#include "m_socket.h"
 #include <openssl/ssl.h>
 #include <openssl/err.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <arpa/inet.h>
+#include <netdb.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <arpa/inet.h>
+#include <netdb.h>
+
+typedef enum {
+    IPv4 = AF_INET
+} domain;
+
+typedef enum {
+    STREAM = SOCK_STREAM,
+    DGRAM = SOCK_DGRAM
+} type;
 
 typedef struct {
-    m_socket socket;
+    int socketfd;
     SSL_CTX *ssl_context;
     SSL *ssl_socket;
+
 } s_socket;
 
 int s_socket_create(s_socket* socket, domain domain, type type);

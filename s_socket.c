@@ -3,40 +3,42 @@
 //
 #include "s_socket.h"
 
+in_addr_t socket_resolve_hostname(const char *hostname);
 int create_context(SSL_CTX** context, int forServer);
-int configure_context(SSL_CTX *ctx);
+int get_address(const char* host, int port, struct sockaddr_in* addr);
 
-int s_socket_create(s_socket* socket, domain domain, type type){
-    socket->ssl_socket = NULL;
-    socket->ssl_context = NULL;
+int s_socket_create(s_socket* s_socket, domain domain, type type){
+    s_socket->ssl_socket = NULL;
+    s_socket->ssl_context = NULL;
 
-    int err = socket_create(&socket->socket, domain, type);
-    if(err != 0){
-        return err;
-    }
-    return 0;
+    s_socket->socketfd = socket(domain, type, 0);
+    setsockopt(s_socket->socketfd, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int));
+
+    return s_socket->socketfd == -1;
 }
 
 int s_socket_connect(s_socket* s_socket, const char* host, int port){
-    int err = socket_connect(&s_socket->socket, host, port);
+    struct sockaddr_in addr;
+    int err = get_address(host, port, &addr);
     if(err != 0){
-        return err;
+        return 1;
     }
+
+    err = connect(s_socket->socketfd, (struct sockaddr *)&addr, sizeof(addr));
+    if (err < 0) {
+        return 1;
+    }
+
     printf("client - Socket connected withot ssl\n");
 
     err = create_context(&s_socket->ssl_context, 0);
     if(err != 0){
         return err;
     }
-    err = configure_context(s_socket->ssl_context);
-    if(err != 0){
-        return err;
-    }
 
     s_socket->ssl_socket = SSL_new(s_socket->ssl_context);
-    SSL_set_fd(s_socket->ssl_socket, s_socket->socket.socketfd);
+    SSL_set_fd(s_socket->ssl_socket, s_socket->socketfd);
 
-    ERR_print_errors_fp(stderr);
     err = SSL_connect(s_socket->ssl_socket);
     if (err <= 0) {
         ERR_print_errors_fp(stderr);
@@ -46,33 +48,48 @@ int s_socket_connect(s_socket* s_socket, const char* host, int port){
 }
 
 int s_socket_bind(s_socket* s_socket, const char* host, int port){
-    return socket_bind(&s_socket->socket, host, port);
+    struct sockaddr_in addr;
+    int err = get_address(host, port, &addr);
+    if(err != 0){
+        return 1;
+    }
+
+    if (bind(s_socket->socketfd, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+        return 1;
+    }
+
+    return 0;
 }
 
 int s_socket_listen(s_socket* s_socket, int n){
-    int err = create_context(&s_socket->ssl_context, 1);
-    if(err != 0){
-        return err;
-    }
-    err = configure_context(s_socket->ssl_context);
-    if(err != 0){
-        return err;
-    }
-    return socket_listen(&s_socket->socket, n);
+    return listen(s_socket->socketfd, n);
 }
 
 int s_socket_accept(s_socket* listening_socket, s_socket* new_socket){
     new_socket->ssl_socket = NULL;
     new_socket->ssl_context = NULL;
 
-    int err = socket_accept(&listening_socket->socket, &new_socket->socket);
+    if(new_socket == NULL){
+        return 1;
+    }
+
+    socklen_t socket_address_length;
+    struct sockaddr_in client_addr;
+    new_socket->socketfd = accept(listening_socket->socketfd, (struct sockaddr*)&client_addr, &socket_address_length);
+    printf("server - Socket accepted without ssl\n");
+
+    int err = create_context(&listening_socket->ssl_context, 1);
     if(err != 0){
         return err;
     }
-    printf("server - Socket accepted without ssl\n");
 
     new_socket->ssl_socket = SSL_new(listening_socket->ssl_context);
-    SSL_set_fd(new_socket->ssl_socket, new_socket->socket.socketfd);
+    SSL_set_fd(new_socket->ssl_socket, new_socket->socketfd);
+
+    if(listening_socket->ssl_context != NULL){
+        SSL_CTX_free(listening_socket->ssl_context);
+        listening_socket->ssl_context = NULL;
+    }
 
     if (SSL_accept(new_socket->ssl_socket) <= 0) {
         return 1;
@@ -110,12 +127,15 @@ int s_socket_close(s_socket* s_socket){
     }
     if(s_socket->ssl_socket != NULL){
         SSL_free(s_socket->ssl_socket);
+        s_socket->ssl_socket = NULL;
     }
     if(s_socket->ssl_context != NULL){
         SSL_CTX_free(s_socket->ssl_context);
+        s_socket->ssl_context = NULL;
     }
 
-    return socket_close(&s_socket->socket);
+    close(s_socket->socketfd);
+    return 0;
 }
 
 int create_context(SSL_CTX** context, int forServer)
@@ -132,22 +152,54 @@ int create_context(SSL_CTX** context, int forServer)
         return 1;
     }
 
-    return 0;
-}
-
-int configure_context(SSL_CTX *ctx)
-{
-    int err = SSL_CTX_use_certificate_file(ctx, "/home/robert/CLionProjects/untitled/mycert.pem", SSL_FILETYPE_PEM);
+    int err = SSL_CTX_use_certificate_file(*context, "/home/robert/CLionProjects/untitled/mycert.pem", SSL_FILETYPE_PEM);
     if (err <= 0) {
         ERR_print_errors_fp(stderr);
         return 1;
     }
 
-    err = SSL_CTX_use_PrivateKey_file(ctx, "/home/robert/CLionProjects/untitled/mykey.pem", SSL_FILETYPE_PEM);
+    err = SSL_CTX_use_PrivateKey_file(*context, "/home/robert/CLionProjects/untitled/mykey.pem", SSL_FILETYPE_PEM);
     if (err <= 0 ) {
         ERR_print_errors_fp(stderr);
         return 1;
     }
 
     return 0;
+}
+
+int get_address(const char* host, int port, struct sockaddr_in* addr) {
+    in_addr_t host_address = socket_resolve_hostname(host);
+    if(host_address == INADDR_NONE){
+        return 1;
+    }
+
+    memset(addr, 0, sizeof(addr));
+    addr->sin_family = AF_INET;
+    addr->sin_port = htons(port);
+    memcpy(&addr->sin_addr.s_addr, &host_address, sizeof(in_addr_t));
+    return 0;
+}
+
+in_addr_t socket_resolve_hostname(const char *hostname) {
+    struct addrinfo hints, *res, *p;
+    struct sockaddr_in *ipv4;
+    in_addr_t addr = INADDR_NONE;
+
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_INET;
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_flags = AI_PASSIVE;
+
+    if (getaddrinfo(hostname, NULL, &hints, &res) != 0) {
+        return INADDR_NONE;
+    }
+
+    for (p = res; p != NULL; p = p->ai_next) {
+        ipv4 = (struct sockaddr_in *)p->ai_addr;
+        addr = ipv4->sin_addr.s_addr;
+        break;
+    }
+
+    freeaddrinfo(res);
+    return addr;
 }

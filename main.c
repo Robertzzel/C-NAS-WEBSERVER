@@ -2,7 +2,7 @@
 #include <pthread.h>
 
 int PORT = 8001;
-const char host[] = "127.0.0.1";
+const char* HOST = "192.168.0.10";
 
 void* myThreadFun(void *vargp)
 {
@@ -15,7 +15,7 @@ void* myThreadFun(void *vargp)
     printf("server - Socket created\n");
 
     int port = PORT;
-    err = s_socket_bind(&s, host, port);
+    err = s_socket_bind(&s, HOST, port);
     if(err != 0){
         printf("server: cannot bind socket");
         return NULL;
@@ -39,7 +39,7 @@ void* myThreadFun(void *vargp)
 
     char buffer[1024] = "hello2";
     int buff_size = strlen(buffer);
-    err = s_socket_write(&client, (uint8_t*)buffer, buff_size, NULL);
+    err = s_socket_write(&client, (uint8_t*)buffer, strlen(buffer), NULL);
     if(err != 0){
         printf("server: cannot write socket");
         return NULL;
@@ -71,7 +71,7 @@ int main() {
     }
 
     int port = PORT;
-    err = s_socket_connect(&s, host, port);
+    err = s_socket_connect(&s, HOST, port);
     if(err != 0){
         printf("client: cannot connect socket\n");
         return 1;
