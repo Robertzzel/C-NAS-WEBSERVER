@@ -36,13 +36,13 @@ typedef struct {
 
 } s_socket;
 
-int s_socket_create(s_socket* socket, domain domain, type type);
-int s_socket_connect(s_socket* s_socket, const char* host, int port);
-int s_socket_bind(s_socket* m_socket, const char* host, int port);
-int s_socket_listen(s_socket* m_socket, int n);
-int s_socket_accept(s_socket* listening_socket, s_socket* new_socket);
-int s_socket_write(s_socket* s_socket, uint8_t* buffer, int buffer_size, int* bytes_written);
-int s_socket_read(s_socket* s_socket, uint8_t* buffer, int buffer_size, int* bytes_read);
-int s_socket_close(s_socket* m_socket);
+int socket_create(s_socket* socket, domain domain, type type);
+int socket_connect(s_socket* s_socket, const char* host, int port);
+int socket_bind(s_socket* m_socket, const char* host, int port);
+int socket_listen(s_socket* m_socket, int n);
+int socket_accept(s_socket* listening_socket, s_socket* new_socket);
+int socket_write(s_socket* s_socket, uint8_t* buffer, int buffer_size, int* bytes_written);
+int socket_read(s_socket* s_socket, uint8_t* buffer, int buffer_size, int* bytes_read);
+int socket_close(s_socket* m_socket);
 
 #endif //UNTITLED_S_SOCKET_H

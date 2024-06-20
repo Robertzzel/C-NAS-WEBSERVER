@@ -7,17 +7,21 @@ in_addr_t socket_resolve_hostname(const char *hostname);
 int create_context(SSL_CTX** context, int forServer);
 int get_address(const char* host, int port, struct sockaddr_in* addr);
 
-int s_socket_create(s_socket* s_socket, domain domain, type type){
+int socket_create(s_socket* s_socket, domain domain, type type){
     s_socket->ssl_socket = NULL;
     s_socket->ssl_context = NULL;
 
     s_socket->socketfd = socket(domain, type, 0);
+    if(s_socket->socketfd == -1) {
+        return 1;
+    }
+
     setsockopt(s_socket->socketfd, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int));
 
-    return s_socket->socketfd == -1;
+    return 0;
 }
 
-int s_socket_connect(s_socket* s_socket, const char* host, int port){
+int socket_connect(s_socket* s_socket, const char* host, int port){
     struct sockaddr_in addr;
     int err = get_address(host, port, &addr);
     if(err != 0){
@@ -28,8 +32,6 @@ int s_socket_connect(s_socket* s_socket, const char* host, int port){
     if (err < 0) {
         return 1;
     }
-
-    printf("client - Socket connected withot ssl\n");
 
     err = create_context(&s_socket->ssl_context, 0);
     if(err != 0){
@@ -47,25 +49,25 @@ int s_socket_connect(s_socket* s_socket, const char* host, int port){
     return 0;
 }
 
-int s_socket_bind(s_socket* s_socket, const char* host, int port){
+int socket_bind(s_socket* m_socket, const char* host, int port){
     struct sockaddr_in addr;
     int err = get_address(host, port, &addr);
     if(err != 0){
         return 1;
     }
 
-    if (bind(s_socket->socketfd, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+    if (bind(m_socket->socketfd, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
         return 1;
     }
 
     return 0;
 }
 
-int s_socket_listen(s_socket* s_socket, int n){
-    return listen(s_socket->socketfd, n);
+int socket_listen(s_socket* m_socket, int n){
+    return listen(m_socket->socketfd, n);
 }
 
-int s_socket_accept(s_socket* listening_socket, s_socket* new_socket){
+int socket_accept(s_socket* listening_socket, s_socket* new_socket){
     new_socket->ssl_socket = NULL;
     new_socket->ssl_context = NULL;
 
@@ -76,7 +78,6 @@ int s_socket_accept(s_socket* listening_socket, s_socket* new_socket){
     socklen_t socket_address_length;
     struct sockaddr_in client_addr;
     new_socket->socketfd = accept(listening_socket->socketfd, (struct sockaddr*)&client_addr, &socket_address_length);
-    printf("server - Socket accepted without ssl\n");
 
     int err = create_context(&listening_socket->ssl_context, 1);
     if(err != 0){
@@ -95,12 +96,10 @@ int s_socket_accept(s_socket* listening_socket, s_socket* new_socket){
         return 1;
     }
 
-    printf("server - Socket accepted with ssl\n");
-
     return 0;
 }
 
-int s_socket_write(s_socket* s_socket, uint8_t* buffer, int buffer_size, int* bytes_written){
+int socket_write(s_socket* s_socket, uint8_t* buffer, int buffer_size, int* bytes_written){
     int err = SSL_write(s_socket->ssl_socket, buffer, buffer_size);
     if(err > 0 && bytes_written != NULL){
         *bytes_written = err;
@@ -110,7 +109,7 @@ int s_socket_write(s_socket* s_socket, uint8_t* buffer, int buffer_size, int* by
     return 0;
 }
 
-int s_socket_read(s_socket* s_socket, uint8_t* buffer, int buffer_size, int* bytes_read){
+int socket_read(s_socket* s_socket, uint8_t* buffer, int buffer_size, int* bytes_read){
     int err = SSL_read(s_socket->ssl_socket, buffer, buffer_size);
     if(err > 0 && bytes_read != NULL){
         *bytes_read = err;
@@ -121,11 +120,9 @@ int s_socket_read(s_socket* s_socket, uint8_t* buffer, int buffer_size, int* byt
     return 0;
 }
 
-int s_socket_close(s_socket* s_socket){
+int socket_close(s_socket* s_socket){
     if(s_socket->ssl_socket != NULL){
         SSL_shutdown(s_socket->ssl_socket);
-    }
-    if(s_socket->ssl_socket != NULL){
         SSL_free(s_socket->ssl_socket);
         s_socket->ssl_socket = NULL;
     }
