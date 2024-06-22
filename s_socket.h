@@ -36,7 +36,7 @@ typedef struct {
 
 } s_socket;
 
-int socket_create(s_socket* socket, domain domain, type type);
+int socket_create(s_socket* s_socket, domain domain, type type, struct ssl_ctx_st *ssl_context);
 int socket_connect(s_socket* s_socket, const char* host, int port);
 int socket_bind(s_socket* m_socket, const char* host, int port);
 int socket_listen(s_socket* m_socket, int n);
