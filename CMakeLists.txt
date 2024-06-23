@@ -7,7 +7,9 @@ find_package(OpenSSL REQUIRED)
 
 add_executable(untitled main.c
         s_socket.h
-        s_socket.c)
+        s_socket.c
+        http_request.c
+        http_request.h)
 
 target_link_libraries(untitled OpenSSL::SSL OpenSSL::Crypto)
 target_compile_options(untitled PRIVATE -DOPENSSL_USE_STATIC_LIBS)
