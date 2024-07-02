@@ -3,139 +3,151 @@
 //
 
 #include "http_request.h"
+#include "m_string.h"
 
-int find_substring_index(const char *str, const char *substr);
-char *trim_whitespace(char *str);
-int parse_http_header(char *line, HttpRequest *request, int header_index);
-int parse_http_request_line(char *line, HttpRequest *request);
+error parse_http_header(char *line, HttpRequest *request);
+error parse_http_request_line(char *line, HttpRequest *request);
 
-int parse_http_request(char *message, HttpRequest *request) {
+error free_http_request(HttpRequest *request){
+    if(request->method != NULL){
+        free(request->method);
+        request->method = NULL;
+    }
+    if(request->uri != NULL){
+        free(request->uri);
+        request->uri = NULL;
+    }
+    if(request->version != NULL){
+        free(request->version);
+        request->version = NULL;
+    }
+    if(request->body != NULL){
+        free(request->body);
+        request->body = NULL;
+    }
+    string_array_free(request->header_names, request->header_count);
+    request->header_names = NULL;
+    string_array_free(request->headers_values, request->header_count);
+    request->headers_values = NULL;
+}
+
+error parse_http_request(char* message, HttpRequest *request) {
+    request->method = NULL;
+    request->uri = NULL;
+    request->version = NULL;
+    request->header_names = NULL;
+    request->headers_values = NULL;
+    request->body = NULL;
     request->header_count = 0;
     char line_delimiter[] = "\r\n";
 
-    char buffer[2048];
-    int next_delimiter_index = find_substring_index(message, line_delimiter);
-    memcpy(buffer, message, next_delimiter_index);
-    buffer[next_delimiter_index] = '\0';
-    parse_http_request_line(buffer, request);
+    char** parts;
+    int number_of_parts;
+    error err = m_string_split(message, line_delimiter, &parts, &number_of_parts);
+    if(err != SUCCESS){
+        return err;
+    }
 
-    int header_index = 0;
-    char* next_header_start = message + next_delimiter_index + strlen(line_delimiter);
-    while(1){
-        next_delimiter_index = find_substring_index(next_header_start, line_delimiter);
-        if(next_delimiter_index <= 0){
-            break;
+    err = parse_http_request_line(*parts, request);
+    if(err != SUCCESS) {
+        string_array_free(parts, number_of_parts);
+        return err;
+    }
+
+    int number_of_headers = number_of_parts - 2;
+    if(number_of_headers > 0) {
+        request->header_names = malloc(sizeof(char*) * number_of_headers);
+        if(request->header_names == NULL){
+            string_array_free(parts, number_of_parts);
+            return FAIL;
         }
-        memcpy(buffer, next_header_start, next_delimiter_index);
-        buffer[next_delimiter_index] = '\0';
-        int err = parse_http_header(buffer, request, header_index);
-        if(err != 0){
-            break;
+        request->headers_values = malloc(sizeof(char*) * number_of_headers);
+        if(request->headers_values == NULL){
+            string_array_free(parts, number_of_parts);
+            free(request->header_names);
+            request->header_names = NULL;
+            return FAIL;
         }
-        header_index++;
-        next_header_start = next_header_start + next_delimiter_index + strlen(line_delimiter);
-    }
-    request->header_count = header_index;
 
-    char* body_start = next_header_start + strlen(line_delimiter);
-    int body_length = strlen(body_start);
-    if(body_length <= 0) {
-        return 0;
+        int i;
+        for(i = 1; i < number_of_parts - 1; ++i) {
+            parse_http_header(*(parts+i), request);
+        }
     }
-    if(body_length >= REQUEST_BODY_MAX_SIZE) {
-        return 1;
-    }
-    memcpy(request->body, body_start, body_length);
-    request->body[body_length] = '\0';
 
-    return 0;
+    char* last_part = *(parts+number_of_parts-1);
+    request->body = strdup(last_part);
+    if(request->body == NULL){
+        return FAIL;
+    }
+
+    string_array_free(parts, number_of_parts);
+    return SUCCESS;
 }
 
-int find_substring_index(const char *str, const char *substr) {
-    char *pos = strstr(str, substr);
-    if (pos == NULL) {
-        return -1;
+error parse_http_header(char *line, HttpRequest *request) {
+    char* delimiter = strchr(line, ':');
+    if(delimiter == NULL){
+        return FAIL;
     }
-    return pos - str;
+    long delimiter_index = delimiter-line;
+    char* key = strndup(line, delimiter_index);
+    if(key == NULL){
+        return FAIL;
+    }
+    request->header_names[request->header_count] = key;
+
+    if(strlen(delimiter) < 2) {
+        return FAIL;
+    }
+
+    char* value;
+    int value_end_index;
+    error err = trim_whitespace(delimiter + 1, &value, &value_end_index);
+    if(err != SUCCESS){
+        return err;
+    }
+
+    value = strndup(value, value_end_index);
+    if(value == NULL){
+        return FAIL;
+    }
+    request->headers_values[request->header_count] = value;
+
+    request->header_count++;
+    return SUCCESS;
 }
 
-char *trim_whitespace(char *str) {
-    char *end;
-    // Trim leading space
-    while (*str == ' ') str++;
-    if (*str == 0)  // All spaces?
-        return str;
-    // Trim trailing space
-    end = str + strlen(str) - 1;
-    while (end > str && *end == ' ') end--;
-    // Write new null terminator
-    *(end + 1) = 0;
-
-    return str;
-}
-
-int parse_http_header(char *line, HttpRequest *request, int header_index) {
-    int request_line_size = strlen(line);
-    if(request_line_size >= REQUEST_HEADER_LINE_MAX_SIZE){
-        return 1;
+error parse_http_request_line(char* line, HttpRequest *request) {
+    char* space_character = strchr(line, ' ');
+    if(space_character == NULL){
+        return FAIL;
     }
-    char buffer[REQUEST_HEADER_LINE_MAX_SIZE];
-    memcpy(buffer, line, request_line_size + 1);
-    char* strtok_r_context = buffer;
-
-    char* header_name = strtok_r(buffer, ":", &strtok_r_context);
-    if(header_name == NULL){
-        return 1;
+    unsigned long method_end_index = space_character - line;
+    request->method = strndup(line, method_end_index);
+    if(request->method == NULL){
+        return FAIL;
     }
-    header_name = trim_whitespace(header_name);
-    int header_name_size = strlen(header_name);
-    if(header_name_size < REQUEST_HEADER_MAX_SIZE){
-        memcpy(request->headers[header_index].data, header_name, header_name_size + 1);
-        request->headers[header_index].name_start_index = 0;
+    line += method_end_index + 1;
+
+    space_character = strchr(line, ' ');
+    if(space_character == NULL){
+        return FAIL;
+    }
+    unsigned long uri_end_index = space_character - line;
+    request->uri = strndup(line, uri_end_index);
+    if(request->uri == NULL){
+        return FAIL;
     }
 
-    int value_start_index = header_name_size + 1;
-    char* header_value = strtok_r(NULL, "\r\n", &strtok_r_context);
-    if(header_value == NULL){
-        return 1;
+    size_t version_string_size = strlen(space_character + 1);
+    if(version_string_size < 1){
+        return FAIL;
     }
-    header_value = trim_whitespace(header_value);
-    int header_value_size = strlen(header_value);
-    if(value_start_index + header_value_size < REQUEST_HEADER_MAX_SIZE){
-        memcpy(&request->headers[header_index].data[value_start_index], header_value, header_value_size + 1);
-        request->headers[header_index].value_start_index = value_start_index;
+    request->version = strdup(space_character + 1);
+    if(request->version == NULL){
+        return FAIL;
     }
 
-    return 0;
-}
-
-int parse_http_request_line(char *line, HttpRequest *request) {
-    int request_line_size = strlen(line);
-    if(request_line_size >= REQUEST_REQUEST_LINE_MAX_SIZE){
-        return 1;
-    }
-    char buffer[REQUEST_REQUEST_LINE_MAX_SIZE];
-    memcpy(buffer, line, request_line_size + 1);
-
-    char* strtok_r_context = buffer;
-
-    char *method = strtok_r(buffer, " ", &strtok_r_context);
-    int method_size = strlen(method);
-    if(method_size < REQUEST_METHOD_MAX_SIZE) {
-        memcpy(request->method, method, method_size + 1);
-    }
-
-    char *uri = strtok_r(NULL, " ", &strtok_r_context);
-    int uri_size = strlen(uri);
-    if(uri_size < REQUEST_URI_MAX_SIZE) {
-        memcpy(request->uri, uri, uri_size + 1);
-    }
-
-    char *version = strtok_r(NULL, "\r\n", &strtok_r_context);
-    int version_size = strlen(version);
-    if(version_size < REQUEST_VERSION_MAX_SIZE) {
-        memcpy(request->version, version, version_size + 1);
-    }
-
-    return 0;
+    return SUCCESS;
 }

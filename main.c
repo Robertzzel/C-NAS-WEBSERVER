@@ -1,6 +1,7 @@
 #include "s_socket.h"
 #include <pthread.h>
 #include "http_request.h"
+
 #define BUFFER_SIZE 2048
 
 
@@ -73,15 +74,19 @@ int main(int argc, char *argv[]) {
         buffer[read] = 0;
 
         HttpRequest request;
-        parse_http_request(buffer, &request);
-
+        err = parse_http_request(buffer, &request);
+        if(err != 0) {
+            break;
+        }
         handle_client(&request, &client);
 
+        free_http_request(&request);
         socket_close(&client);
     }
 
     socket_close(&s);
     SSL_CTX_free(context);
+
     return 0;
 }
 
@@ -115,7 +120,7 @@ int create_context(SSL_CTX** context, const char* certificate_file, const char* 
 }
 
 int handle_client(HttpRequest* request, s_socket* conn) {
-
+    printf("REQUEST: %s\n", request->uri);
     int isRoot = strcmp(request->uri, "/") == 0;
     if (isRoot){
         char buffer[] = "THIS IS ROOT\0";

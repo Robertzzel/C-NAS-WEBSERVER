@@ -7,35 +7,23 @@
 
 #include "string.h"
 #include "stdlib.h"
-
-#define REQUEST_MAX_HEADERS 25
-#define REQUEST_METHOD_MAX_SIZE 10
-#define REQUEST_URI_MAX_SIZE 100
-#define REQUEST_VERSION_MAX_SIZE 20
-#define REQUEST_BODY_MAX_SIZE 500
-#define REQUEST_HEADER_MAX_SIZE 125
-#define REQUEST_HEADER_LINE_MAX_SIZE 125
-#define REQUEST_REQUEST_LINE_MAX_SIZE 256
-
-typedef struct {
-    char data[REQUEST_HEADER_MAX_SIZE];
-    unsigned short name_start_index;
-    unsigned short value_start_index;
-} HttpHeader;
+#include "m_string.h"
 
 typedef struct {
     //request
-    char method[REQUEST_METHOD_MAX_SIZE];
-    char uri[REQUEST_URI_MAX_SIZE];
-    char version[REQUEST_VERSION_MAX_SIZE];
+    char* method;
+    char* uri;
+    char* version;
 
     //header
-    HttpHeader headers[REQUEST_MAX_HEADERS];
     int header_count;
+    char** header_names;
+    char** headers_values;
 
-    char body[REQUEST_BODY_MAX_SIZE];
-    int body_size;
+    //body
+    char* body;
 } HttpRequest;
 
-int parse_http_request(char *message, HttpRequest *request);
+error parse_http_request(char* message, HttpRequest *request);
+error free_http_request(HttpRequest *request);
 #endif //UNTITLED_HTTP_REQUEST_H

@@ -33,7 +33,6 @@ typedef struct {
     int socketfd;
     SSL_CTX *ssl_context;
     SSL *ssl_socket;
-
 } s_socket;
 
 int socket_create(s_socket* s_socket, domain domain, type type, struct ssl_ctx_st *ssl_context);
