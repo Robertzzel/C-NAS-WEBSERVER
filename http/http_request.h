@@ -7,7 +7,8 @@
 
 #include "string.h"
 #include "stdlib.h"
-#include "m_string.h"
+#include "../error.h"
+#include "../utils.h"
 
 typedef struct {
     //request
@@ -16,9 +17,8 @@ typedef struct {
     char* version;
 
     //header
-    int header_count;
-    char** header_names;
-    char** headers_values;
+    array_of_strings_t header_names;
+    array_of_strings_t headers_values;
 
     //body
     char* body;

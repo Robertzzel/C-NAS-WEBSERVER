@@ -1,7 +1,7 @@
 #include "s_socket.h"
 #include <pthread.h>
-#include "http_request.h"
-
+#include "http/http_request.h"
+#include "http/http_response.h"
 #define BUFFER_SIZE 2048
 
 
@@ -56,6 +56,7 @@ int main(int argc, char *argv[]) {
     printf("server - Socket listening\n");
 
     char buffer[BUFFER_SIZE];
+
     while(1) {
         s_socket client;
         err = socket_accept(&s, &client);
@@ -78,8 +79,8 @@ int main(int argc, char *argv[]) {
         if(err != 0) {
             break;
         }
-        handle_client(&request, &client);
 
+        handle_client(&request, &client);
         free_http_request(&request);
         socket_close(&client);
     }
@@ -120,11 +121,79 @@ int create_context(SSL_CTX** context, const char* certificate_file, const char* 
 }
 
 int handle_client(HttpRequest* request, s_socket* conn) {
-    printf("REQUEST: %s\n", request->uri);
-    int isRoot = strcmp(request->uri, "/") == 0;
-    if (isRoot){
-        char buffer[] = "THIS IS ROOT\0";
-        socket_write(conn, buffer, strlen(buffer), NULL);
+    printf("%s\n",request->uri);
+    if(strcmp(request->uri, "/") == 0) {
+        char payload[] = "<!DOCTYPE html>\n"
+                         "<html lang=\"en\">\n"
+                         "<head>\n"
+                         "    <meta charset=\"UTF-8\">\n"
+                         "    <title>Sample HTML Page</title>\n"
+                         "</head>\n"
+                         "<body>\n"
+                         "    <h1>Hello, World!</h1>\n"
+                         "    <p>This is a sample HTML page.</p>\n"
+                         "</body>\n"
+                         "</html>";
+
+        http_response_t response;
+        error err = http_response_new(&response);
+        if(err != SUCCESS) {
+            return 1;
+        }
+        printf("new respose\n");
+        err = http_response_set_status(&response, 200);
+        if(err != SUCCESS) {
+            return 1;
+        }
+        printf("status set\n");
+        err = http_response_set_body(&response, payload);
+        if(err != SUCCESS) {
+            return 1;
+        }
+        printf("body set\n");
+        err = http_response_add_header(&response, "Content-Type", "text/html; charset=UTF-8");
+        if(err != SUCCESS) {
+            return 1;
+        }
+        printf("headers set\n");
+        err = http_response_add_header(&response, "Connection", "close");
+        if(err != SUCCESS) {
+            return 1;
+        }
+        printf("headers set\n");
+        char* string;
+        err = http_response_to_bytes(&response, &string);
+        if(err != SUCCESS) {
+            return 1;
+        }
+
+        http_response_free(&response);
+        socket_write(conn, (uint8_t*)string, strlen(string), NULL);
+        free(string);
+    } else {
+        http_response_t response;
+        error err = http_response_new(&response);
+        if(err != SUCCESS) {
+            return 1;
+        }
+        err = http_response_set_status(&response, 404);
+        if(err != SUCCESS) {
+            return 1;
+        }
+        err = http_response_add_header(&response, "Connection", "close");
+        if(err != SUCCESS) {
+            return 1;
+        }
+
+        char* string;
+        err = http_response_to_bytes(&response, &string);
+        if(err != SUCCESS) {
+            return 1;
+        }
+
+        http_response_free(&response);
+        socket_write(conn, (uint8_t*)string, strlen(string), NULL);
+        free(string);
     }
 
     return 0;
