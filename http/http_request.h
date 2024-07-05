@@ -9,21 +9,17 @@
 #include "stdlib.h"
 #include "../error.h"
 #include "../utils.h"
+#define HTTP_MESSAGE_DELIMITER "\r\n"
 
 typedef struct {
-    //request
     char* method;
     char* uri;
     char* version;
-
-    //header
     array_of_strings_t header_names;
     array_of_strings_t headers_values;
-
-    //body
     char* body;
-} HttpRequest;
+} http_request_t;
 
-error parse_http_request(char* message, HttpRequest *request);
-error free_http_request(HttpRequest *request);
+error http_request_from_bytes(char* message, http_request_t *request);
+error http_request_free(http_request_t *request);
 #endif //UNTITLED_HTTP_REQUEST_H

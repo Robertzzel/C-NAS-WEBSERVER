@@ -56,11 +56,7 @@ error http_response_set_body(http_response_t* response, char* body){
         return FAIL;
     }
 
-    char body_size_buffer[32];
-    sprintf(body_size_buffer, "%lu", strlen(body));
-    error err = http_response_add_header(response, "Content-Length", body_size_buffer);
-
-    return err;
+    return SUCCESS;
 }
 
 error http_response_add_header(http_response_t* response, char* name, char* value) {
@@ -156,6 +152,44 @@ error http_response_to_bytes(http_response_t* response, char** string) {
         strcat(*string, response->body);
     }
     strcat(*string, "\r\n");
+
+    return SUCCESS;
+}
+
+error http_response_write_to_socket(http_response_t* response, s_socket* socket, int write_body) {
+    socket_write(socket, response->version, strlen(response->version), NULL);
+    socket_write(socket, " ", 1, NULL);
+    char status[4];
+    sprintf(status, "%d", response->status);
+    socket_write(socket, status, 3, NULL);
+    socket_write(socket, " OK\r\n", 5, NULL);
+
+    for(int i=0;i<response->header_names.size;++i){
+        char *name, *value;
+        error err = string_array_get(&response->header_names, i, &name);
+        if(err != SUCCESS){
+            return err;
+        }
+        err = string_array_get(&response->header_values, i, &value);
+        if(err != SUCCESS){
+            return err;
+        }
+        socket_write(socket, name, strlen(name), NULL);
+        socket_write(socket, ": ", 2, NULL);
+        socket_write(socket, value, strlen(value), NULL);
+        socket_write(socket, "\r\n", 2, NULL);
+    }
+    socket_write(socket, "\r\n", 2, NULL);
+
+    if(write_body == 0){
+        return SUCCESS;
+    }
+
+    if(response->body != NULL){
+        socket_write(socket, response->body, strlen(response->body), NULL);
+    }
+
+    socket_write(socket, "\r\n", 2, NULL);
 
     return SUCCESS;
 }

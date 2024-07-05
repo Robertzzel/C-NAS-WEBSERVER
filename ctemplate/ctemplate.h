@@ -8,6 +8,8 @@
 #ifndef _CTEMPLATE_H
 #define _CTEMPLATE_H
 
+#include "../s_socket.h"
+
 typedef struct TMPL_varlist TMPL_varlist;
 typedef struct TMPL_loop  TMPL_loop;
 typedef struct TMPL_fmtlist TMPL_fmtlist;

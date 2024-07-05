@@ -11,8 +11,7 @@
 #include "stdlib.h"
 #include "string.h"
 
-#define HOME_PAGE_FILE_URL "../templates/home.html"
-
-error get_home_page(char** file_content);
+error write_home_page_to_socket(s_socket* socket);
+error get_home_page(char** page);
 
 #endif //UNTITLED_HTML_FILES_H

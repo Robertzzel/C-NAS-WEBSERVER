@@ -8,6 +8,7 @@
 #include "string.h"
 #include "stdlib.h"
 #include "error.h"
+#include "stdio.h"
 
 #define STRING_ARRAY_INITIAL_DIMENSION 5
 

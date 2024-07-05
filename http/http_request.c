@@ -4,49 +4,18 @@
 
 #include "http_request.h"
 
-error parse_http_header(char *line, HttpRequest *request);
-error parse_http_request_line(char *line, HttpRequest *request);
+error parse_http_header(char *line, http_request_t *request);
+error parse_http_request_line(char *line, http_request_t *request);
+error http_request_init(http_request_t *request);
 
-error free_http_request(HttpRequest *request){
-    if(request->method != NULL){
-        free(request->method);
-        request->method = NULL;
-    }
-    if(request->uri != NULL){
-        free(request->uri);
-        request->uri = NULL;
-    }
-    if(request->version != NULL){
-        free(request->version);
-        request->version = NULL;
-    }
-    if(request->body != NULL){
-        free(request->body);
-        request->body = NULL;
-    }
-    string_array_free(&request->header_names);
-    string_array_free(&request->headers_values);
-
-    return SUCCESS;
-}
-
-error parse_http_request(char* message, HttpRequest *request) {
-    request->method = NULL;
-    request->uri = NULL;
-    request->version = NULL;
-    error err = string_array_new(&request->header_names);
-    if(err != SUCCESS){
+error http_request_from_bytes(char* message, http_request_t *request) {
+    error err = http_request_init(request);
+    if(err != SUCCESS) {
         return err;
     }
-    err = string_array_new(&request->headers_values);
-    if(err != SUCCESS){
-        return err;
-    }
-    request->body = NULL;
-    char line_delimiter[] = "\r\n";
 
     array_of_strings_t parts;
-    err = string_split(message, line_delimiter, &parts);
+    err = string_split(message, HTTP_MESSAGE_DELIMITER, &parts);
     if(err != SUCCESS){
         return err;
     }
@@ -63,19 +32,15 @@ error parse_http_request(char* message, HttpRequest *request) {
         return err;
     }
 
-    int number_of_headers = parts.size - 2;
-    if(number_of_headers > 0) {
-        int i;
-        for(i = 1; i < parts.size - 1; ++i) {
-            char *header_line = NULL;
-            err = string_array_get(&parts, i, &header_line);
-            if(err != SUCCESS){
-                return err;
-            }
-            err = parse_http_header(header_line, request);
-            if(err != SUCCESS){
-                return err;
-            }
+    for(int i = 1; i < parts.size - 1; ++i) {
+        char *header_line = NULL;
+        err = string_array_get(&parts, i, &header_line);
+        if(err != SUCCESS){
+            return err;
+        }
+        err = parse_http_header(header_line, request);
+        if(err != SUCCESS){
+            return err;
         }
     }
 
@@ -93,7 +58,7 @@ error parse_http_request(char* message, HttpRequest *request) {
     return SUCCESS;
 }
 
-error parse_http_header(char *line, HttpRequest *request) {
+error parse_http_header(char *line, http_request_t *request) {
     char* delimiter = strchr(line, ':');
     if(delimiter == NULL){
         return FAIL;
@@ -123,7 +88,7 @@ error parse_http_header(char *line, HttpRequest *request) {
     return SUCCESS;
 }
 
-error parse_http_request_line(char* line, HttpRequest *request) {
+error parse_http_request_line(char* line, http_request_t *request) {
     char* space_character = strchr(line, ' ');
     if(space_character == NULL){
         return FAIL;
@@ -153,6 +118,46 @@ error parse_http_request_line(char* line, HttpRequest *request) {
     if(request->version == NULL){
         return FAIL;
     }
+
+    return SUCCESS;
+}
+
+error http_request_free(http_request_t *request){
+    if(request->method != NULL){
+        free(request->method);
+        request->method = NULL;
+    }
+    if(request->uri != NULL){
+        free(request->uri);
+        request->uri = NULL;
+    }
+    if(request->version != NULL){
+        free(request->version);
+        request->version = NULL;
+    }
+    if(request->body != NULL){
+        free(request->body);
+        request->body = NULL;
+    }
+    string_array_free(&request->header_names);
+    string_array_free(&request->headers_values);
+
+    return SUCCESS;
+}
+
+error http_request_init(http_request_t *request) {
+    request->method = NULL;
+    request->uri = NULL;
+    request->version = NULL;
+    error err = string_array_new(&request->header_names);
+    if(err != SUCCESS){
+        return err;
+    }
+    err = string_array_new(&request->headers_values);
+    if(err != SUCCESS){
+        return err;
+    }
+    request->body = NULL;
 
     return SUCCESS;
 }

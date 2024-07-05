@@ -4,6 +4,17 @@
 
 #include "utils.h"
 
+error get_file_size(FILE* f, long* size) {
+    if(f == NULL || size == NULL){
+        return FAIL;
+    }
+    long initial_size = ftell(f);
+    fseek(f, 0, SEEK_END); // seek to end of file
+    *size = ftell(f); // get current file pointer
+    fseek(f, initial_size, SEEK_SET);
+    return SUCCESS;
+}
+
 error count_substring(const char *str, const char *substr, int* occurrences) {
     *occurrences = 0;
     char* substring = strstr(str, substr);

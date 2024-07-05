@@ -5,6 +5,11 @@
     <title>Title</title>
 </head>
 <body>
+    <h1>ds<TMPL_VAR name="x" default="value"></h1>
     <h1>SAAAAAl</h1>
+
+    <TMPL_IF name="x">
+        <h2>Also this</h2>
+    </TMPL_IF>
 </body>
 </html>

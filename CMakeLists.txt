@@ -17,6 +17,10 @@ add_executable(untitled main.c
         http/http_response.h
         html/html_files.c
         html/html_files.h
+        ctemplate/ctemplate.c
+        ctemplate/ctemplate.h
+        routes/routes.c
+        routes/routes.h
 )
 
 target_link_libraries(untitled OpenSSL::SSL OpenSSL::Crypto)

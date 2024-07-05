@@ -90,6 +90,7 @@ int socket_accept(s_socket* listening_socket, s_socket* new_socket){
     new_socket->ssl_socket = SSL_new(listening_socket->ssl_context);
     SSL_set_fd(new_socket->ssl_socket, new_socket->socketfd);
 
+
     if (SSL_accept(new_socket->ssl_socket) <= 0) {
         ERR_print_errors_fp(stderr);
         return 1;
@@ -98,7 +99,7 @@ int socket_accept(s_socket* listening_socket, s_socket* new_socket){
     return 0;
 }
 
-int socket_write(s_socket* s_socket, uint8_t* buffer, int buffer_size, int* bytes_written){
+int socket_write(s_socket* s_socket, char* buffer, unsigned long buffer_size, unsigned long* bytes_written){
     if(s_socket == NULL || buffer == NULL){
         return 1;
     }
@@ -112,7 +113,7 @@ int socket_write(s_socket* s_socket, uint8_t* buffer, int buffer_size, int* byte
     return 0;
 }
 
-int socket_read(s_socket* s_socket, uint8_t* buffer, int buffer_size, int* bytes_read){
+int socket_read(s_socket* s_socket, char* buffer, unsigned long buffer_size, unsigned long* bytes_read){
     if(s_socket == NULL || buffer == NULL){
         return 1;
     }
@@ -177,4 +178,33 @@ in_addr_t socket_resolve_hostname(const char *hostname) {
 
     freeaddrinfo(res);
     return addr;
+}
+
+int socket_create_context(SSL_CTX** context, const char* certificate_file, const char* private_key_file, int for_server)
+{
+    const SSL_METHOD *method;
+
+    if(for_server == 1){
+        method = TLS_server_method();
+    }else{
+        method = TLS_client_method();
+    }
+    *context = SSL_CTX_new(method);
+    if (!*context) {
+        return 1;
+    }
+
+    int err = SSL_CTX_use_certificate_file(*context, certificate_file, SSL_FILETYPE_PEM);
+    if (err <= 0) {
+        ERR_print_errors_fp(stderr);
+        return 1;
+    }
+
+    err = SSL_CTX_use_PrivateKey_file(*context, private_key_file, SSL_FILETYPE_PEM);
+    if (err <= 0 ) {
+        ERR_print_errors_fp(stderr);
+        return 1;
+    }
+
+    return 0;
 }

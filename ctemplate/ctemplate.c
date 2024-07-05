@@ -135,6 +135,7 @@ struct template {
     const char *filename;  /* name of template file */
     const char *tmplstr;   /* contents of template file */
     FILE *out;             /* template output file pointer */
+    s_socket* socket;            /* socket descriptor to send to*/
     FILE *errout;          /* error output file pointer */
     tagnode *roottag;      /* root of parse tree */
     const TMPL_fmtlist
@@ -1077,7 +1078,6 @@ write_text(const char *p, int len, FILE *out) {
     for (i = 0; i < len; i++) {
 
         /* check for \ or \\ before \n or \r\n */
-
         if (p[i] == '\\') {
             k = i + 1;
             if (k < len && p[k] == '\\') {
@@ -1099,6 +1099,7 @@ write_text(const char *p, int len, FILE *out) {
         fputc(p[i], out);
     }
 }
+
 
 /*
  * newfilename() returns a copy of an include file name with
@@ -1150,6 +1151,7 @@ walk(template *t, tagnode *tag, const TMPL_varlist *varlist) {
 
     case tag_text:
         write_text(tag->tag.text.start, tag->tag.text.len, t->out);
+
         break;
 
     case tag_var:

@@ -4,38 +4,53 @@
 
 #include "html_files.h"
 
-error get_file_size(FILE* f, long* size) {
-    if(f == NULL || size == NULL){
-        return FAIL;
-    }
-    long initial_size = ftell(f);
-    fseek(f, 0, SEEK_END); // seek to end of file
-    *size = ftell(f); // get current file pointer
-    fseek(f, initial_size, SEEK_SET);
-    return SUCCESS;
-}
 
-error get_home_page(char** file_content) {
-    FILE *f = fopen(HOME_PAGE_FILE_URL, "r");
+
+error write_home_page_to_socket(s_socket* socket) {
+    TMPL_varlist *mylist;
+    mylist = TMPL_add_var(0, "y", "sdsd", "x", "aa", 0 );
+
+    FILE *f = tmpfile();
     if(f == NULL){
         return FAIL;
     }
 
-    long file_size;
-    error err = get_file_size(f, &file_size);
-    if(err != SUCCESS){
-        return err;
+    TMPL_write("/home/robert/CLionProjects/untitled/templates/home.html", 0, 0, mylist, f, stderr);
+    rewind(f);
+
+    char buffer[64];
+    size_t bytes_read = fread(&buffer[0], 1, 64, f);
+    while(bytes_read != 0) {
+        socket_write(socket, buffer, bytes_read, NULL);
+        bytes_read = fread(buffer, 1, 64, f);
     }
 
-    *file_content = malloc(sizeof(char) * (file_size + 1));
-    if(*file_content == NULL){
+    fclose(f);
+    return SUCCESS;
+}
+
+error get_home_page(char** page) {
+    TMPL_varlist *mylist;
+    mylist = TMPL_add_var(0, "y", "sdsd", "x", "aa", 0 );
+
+    FILE *f = tmpfile();
+    if(f == NULL){
         return FAIL;
     }
 
-    char buffer[64];
-    while(fgets(buffer, 63, f) != NULL) {
-        strcat(*file_content, buffer);
-    }
+    TMPL_write("/home/robert/CLionProjects/untitled/templates/home.html", 0, 0, mylist, f, stderr);
+    TMPL_free_varlist(mylist);
 
+    long size = ftell(f);
+    *page = malloc(sizeof(char) * (size + 1));
+    if(*page == NULL){
+        return FAIL;
+    }
+    rewind(f);
+
+    fread(*page, 1, size, f);
+    (*page)[size] = 0;
+
+    fclose(f);
     return SUCCESS;
 }
