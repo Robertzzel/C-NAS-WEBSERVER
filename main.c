@@ -1,12 +1,9 @@
 #include "s_socket.h"
 #include "http/http_request.h"
 #include "html/html_files.h"
-#include "time.h"
 #include "routes/routes.h"
-#include "file_utils/file_utils.h"
 #define BUFFER_SIZE 1024
 #include "stdio.h"
-#include "file_utils/file_utils.h"
 error handle_client(http_request_t* request, s_socket* conn);
 
 int main(int argc, char *argv[]) {

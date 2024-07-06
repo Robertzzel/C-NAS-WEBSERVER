@@ -98,11 +98,12 @@ error handle_download_route(http_request_t* request, s_socket* conn) {
 
     socket_write(conn, string, strlen(string) - 2, NULL);
 
-    char* files[] = {
-            "/home/robert/start.sh",
-            "/home/robert/Workspace/iommu.sh"
-    };
-    write_zip_file("/home/robert/archive.zip", files, 2);
+    array_of_strings_t files;
+    string_array_new(&files);
+    string_array_add(&files, "/home/robert/start.sh", strlen("/home/robert/start.sh"));
+    string_array_add(&files, "/home/robert/Workspace/iommu.sh", strlen("/home/robert/Workspace/iommu.sh"));
+    write_zip_file("/home/robert/archive.zip", &files);
+    string_array_free(&files);
 
     socket_write(conn, "\r\n", 2, NULL);
     free(string);

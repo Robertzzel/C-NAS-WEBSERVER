@@ -4,15 +4,53 @@
 
 #include <string.h>
 #include "file_utils.h"
+#include "../error.h"
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
 
+/*
+ ZIP FILE STRUCTURE:
+    LOCAL_FILE_HEADER1
+    FILE_CONTENT1
+    LOCAL_FILE_HEADER2
+    FILE_CONTENT2
+    ...
+    CENTRAL_DIRECTORY_HEADER1
+    CENTRAL_DIRECTORY_HEADER2
+    ...
+    END OF CENTRAL DIRECTORY HEADER
+ */
+
 #define ZIP_LOCAL_FILE_HEADER_SIGNATURE 0x04034b50
 #define ZIP_CENTRAL_DIRECTORY_HEADER_SIGNATURE 0x02014b50
 #define ZIP_END_OF_CENTRAL_DIRECTORY_SIGNATURE 0x06054b50
+#define LOCAL_FILE_HEADER_SIZE 30
+#define CENTRAL_DIRECTORY_HEADER_SIZE 46
 
-#pragma pack(push, 1)
+error get_file_size(const char *filename, uint32_t* file_size) {
+    FILE *file = fopen(filename, "rb");
+    if (file == NULL) {
+        return FAIL;
+    }
+
+    // Seek to the end of the file
+    if (fseek(file, 0, SEEK_END) != 0) {
+        return FAIL;
+    }
+
+    // Get the current position of the file pointer, which is the file size
+    uint32_t fileSize = ftell(file);
+    if (fileSize == -1) {
+        return FAIL;
+    }
+
+    *file_size = fileSize;
+
+    fclose(file);
+    return SUCCESS;
+}
+
 typedef struct {
     uint32_t signature;
     uint16_t version_needed;
@@ -45,7 +83,7 @@ typedef struct {
     uint16_t internal_file_attributes;
     uint32_t external_file_attributes;
     uint32_t relative_offset_of_local_header;
-} CentralDirectoryHeader;
+} central_directory_header_t;
 
 typedef struct {
     uint32_t signature;
@@ -56,123 +94,180 @@ typedef struct {
     uint32_t size_of_the_central_directory;
     uint32_t offset_of_start_of_central_directory_with_respect_to_the_starting_disk_number;
     uint16_t zip_file_comment_length;
-} EndOfCentralDirectoryRecord;
+} end_of_central_directory_record_t;
 #pragma pack(pop)
 
-unsigned int m_crc32(const void *buf, size_t size) {
-    // Simple CRC32 function placeholder; you might want to use a proper CRC32 implementation
-    unsigned int crc = 0xFFFFFFFF;
-    const unsigned char *p = buf;
-    while (size--) {
-        crc ^= *p++;
-        for (int i = 0; i < 8; i++) {
+error m_crc32(const char *filename, uint32_t *crc32) {
+    FILE *file = fopen(filename, "rb");
+    if (!file) {
+        return FAIL;
+    }
+    uint32_t crc = 0xFFFFFFFF;
+
+    // Seek to the end of the file to determine its size
+    fseek(file, 0, SEEK_END);
+    long fileSize = ftell(file);
+    rewind(file);
+
+    // Read the file backwards by iterating from end to start
+    for (long i = fileSize - 1; i >= 0; i--) {
+        int ch = fgetc(file);
+        // Print or process the character (you can modify this part)
+        crc ^= ch;
+        for (int _ = 0; _ < 8; ++_) {
             if (crc & 1)
                 crc = (crc >> 1) ^ 0xEDB88320;
             else
                 crc = crc >> 1;
         }
     }
-    return crc ^ 0xFFFFFFFF;
+
+    fclose(file);
+    *crc32 = crc ^ 0xFFFFFFFF;
+    return SUCCESS;
 }
 
-void write_zip_file(const char *zip_filename, const char **files, int file_count) {
+error write_zip_file(const char *zip_filename, array_of_strings_t* files) {
     FILE *zip_file = fopen(zip_filename, "wb");
     if (!zip_file) {
-        perror("fopen");
-        exit(EXIT_FAILURE);
+        return FAIL;
+    }
+
+    local_file_header_t* local_files_headers = calloc(files->size, sizeof(local_file_header_t));
+    if(local_files_headers == NULL){
+        return FAIL;
+    }
+    central_directory_header_t* central_directory_headers = calloc(files->size, sizeof(central_directory_header_t));
+    if(central_directory_headers == NULL){
+        return FAIL;
     }
 
     unsigned int central_directory_offset = 0;
     unsigned int central_directory_size = 0;
-    for (int i = 0; i < file_count; i++) {
-        const char *filename = files[i];
-        FILE *input_file = fopen(filename, "rb");
-        if (!input_file) {
-            perror("fopen");
-            exit(EXIT_FAILURE);
+    for (int i = 0; i < files->size; i++) {
+        char *filename;
+        error err = string_array_get(files, i, &filename);
+        if(err != SUCCESS){
+            return err;
         }
 
-        fseek(input_file, 0, SEEK_END);
-        unsigned int file_size = ftell(input_file);
-        fseek(input_file, 0, SEEK_SET);
-        void *file_data = malloc(file_size);
-        if (!file_data) {
-            perror("malloc");
-            exit(EXIT_FAILURE);
+        uint32_t file_size;
+        err = get_file_size(filename, &file_size);
+        if(err != SUCCESS){
+            return err;
         }
-        fread(file_data, 1, file_size, input_file);
-        fclose(input_file);
 
-        unsigned int crc = m_crc32(file_data, file_size);
-        local_file_header_t local_header = {0};
-        local_header.signature = ZIP_LOCAL_FILE_HEADER_SIGNATURE;
-        local_header.version_needed = 20;
-        local_header.general_purpose_bit_flag = 0;
-        local_header.compression_method = 0;  // STORE
-        local_header.last_mod_file_time = 0;
-        local_header.last_mod_file_date = 0;
-        local_header.crc32 = crc;
-        local_header.compressed_size = file_size;
-        local_header.uncompressed_size = file_size;
-        local_header.file_name_length = strlen(filename);
-        local_header.extra_field_length = 0;
+        uint32_t crc = 0;
+        err = m_crc32(filename, &crc);
+        if(err != SUCCESS){
+            return err;
+        }
 
-        fwrite(&local_header, sizeof(local_header), 1, zip_file);
-        fwrite(filename, 1, local_header.file_name_length, zip_file);
-        fwrite(file_data, 1, file_size, zip_file);
+        local_files_headers[i].signature = ZIP_LOCAL_FILE_HEADER_SIGNATURE;
+        local_files_headers[i].version_needed = 20;
+        local_files_headers[i].general_purpose_bit_flag = 0;
+        local_files_headers[i].compression_method = 0;  // STORE
+        local_files_headers[i].last_mod_file_time = 0;
+        local_files_headers[i].last_mod_file_date = 0;
+        local_files_headers[i].crc32 = crc;
+        local_files_headers[i].compressed_size = file_size;
+        local_files_headers[i].uncompressed_size = file_size;
+        local_files_headers[i].file_name_length = strlen(filename);
+        local_files_headers[i].extra_field_length = 0;
+
+        central_directory_headers[i].signature = ZIP_CENTRAL_DIRECTORY_HEADER_SIGNATURE;
+        central_directory_headers[i].version_made_by = 20;
+        central_directory_headers[i].version_needed = 20;
+        central_directory_headers[i].compression_method = 0;  // STORE
+        central_directory_headers[i].last_mod_file_time = 0;
+        central_directory_headers[i].last_mod_file_date = 0;
+        central_directory_headers[i].crc32 = crc;
+        central_directory_headers[i].compressed_size = file_size;
+        central_directory_headers[i].uncompressed_size = file_size;
+        central_directory_headers[i].file_name_length = strlen(filename);
+        central_directory_headers[i].relative_offset_of_local_header = central_directory_offset;
+
+        central_directory_offset += LOCAL_FILE_HEADER_SIZE + strlen(filename) + file_size;
+        central_directory_size += CENTRAL_DIRECTORY_HEADER_SIZE + strlen(filename);
     }
 
-    for (int i = 0; i < file_count; i++) {
-        const char *filename = files[i];
-        FILE *input_file = fopen(filename, "rb");
-        if (!input_file) {
-            perror("fopen");
-            exit(EXIT_FAILURE);
+    for (int i = 0; i < files->size; i++) {
+        fwrite(&local_files_headers[i].signature, sizeof(local_files_headers[i].signature), 1, zip_file);
+        fwrite(&local_files_headers[i].version_needed, sizeof(local_files_headers[i].version_needed), 1, zip_file);
+        fwrite(&local_files_headers[i].general_purpose_bit_flag, sizeof(local_files_headers[i].general_purpose_bit_flag), 1, zip_file);
+        fwrite(&local_files_headers[i].compression_method, sizeof(local_files_headers[i].compression_method), 1, zip_file);
+        fwrite(&local_files_headers[i].last_mod_file_time, sizeof(local_files_headers[i].last_mod_file_time), 1, zip_file);
+        fwrite(&local_files_headers[i].last_mod_file_date, sizeof(local_files_headers[i].last_mod_file_date), 1, zip_file);
+        fwrite(&local_files_headers[i].crc32, sizeof(local_files_headers[i].crc32), 1, zip_file);
+        fwrite(&local_files_headers[i].compressed_size, sizeof(local_files_headers[i].compressed_size), 1, zip_file);
+        fwrite(&local_files_headers[i].uncompressed_size, sizeof(local_files_headers[i].uncompressed_size), 1, zip_file);
+        fwrite(&local_files_headers[i].file_name_length, sizeof(local_files_headers[i].file_name_length), 1, zip_file);
+        fwrite(&local_files_headers[i].extra_field_length, sizeof(local_files_headers[i].extra_field_length), 1, zip_file);
+
+        char *filename;
+        error err = string_array_get(files, i, &filename);
+        if(err != SUCCESS){
+            return err;
         }
+        fwrite(filename, local_files_headers[i].file_name_length, 1, zip_file);
 
-        fseek(input_file, 0, SEEK_END);
-        unsigned int file_size = ftell(input_file);
-        fseek(input_file, 0, SEEK_SET);
-        void *file_data = malloc(file_size);
-        if (!file_data) {
-            perror("malloc");
-            exit(EXIT_FAILURE);
+        FILE* f = fopen(filename, "rb");
+        if(f == NULL){
+            return FAIL;
         }
-        fread(file_data, 1, file_size, input_file);
-        fclose(input_file);
-
-        unsigned int crc = m_crc32(file_data, file_size);
-
-        CentralDirectoryHeader central_header = {0};
-        central_header.signature = ZIP_CENTRAL_DIRECTORY_HEADER_SIGNATURE;
-        central_header.version_made_by = 20;
-        central_header.version_needed = 20;
-        central_header.compression_method = 0;  // STORE
-        central_header.last_mod_file_time = 0;
-        central_header.last_mod_file_date = 0;
-        central_header.crc32 = crc;
-        central_header.compressed_size = file_size;
-        central_header.uncompressed_size = file_size;
-        central_header.file_name_length = strlen(filename);
-        central_header.relative_offset_of_local_header = central_directory_offset;
-
-        fwrite(&central_header, sizeof(central_header), 1, zip_file);
-        fwrite(filename, 1, central_header.file_name_length, zip_file);
-
-        central_directory_offset += sizeof(local_file_header_t) + strlen(filename) + file_size;
-        central_directory_size += sizeof(CentralDirectoryHeader) + strlen(filename);
-
-        free(file_data);
+        char buffer[1024];
+        size_t bytes_read = fread(buffer, 1, 1024, f);
+        while(bytes_read != 0){
+            fwrite(buffer, bytes_read, 1, zip_file);
+            bytes_read = fread(buffer, 1, 1024, f);
+        }
+        fclose(f);
     }
 
-    EndOfCentralDirectoryRecord eocd = {0};
+    for (int i = 0; i < files->size; i++) {
+        fwrite(&central_directory_headers[i].signature, sizeof(central_directory_headers[i].signature), 1, zip_file);
+        fwrite(&central_directory_headers[i].version_made_by, sizeof(central_directory_headers[i].version_made_by), 1, zip_file);
+        fwrite(&central_directory_headers[i].version_needed, sizeof(central_directory_headers[i].version_needed), 1, zip_file);
+        fwrite(&central_directory_headers[i].general_purpose_bit_flag, sizeof(central_directory_headers[i].general_purpose_bit_flag), 1, zip_file);
+        fwrite(&central_directory_headers[i].compression_method, sizeof(central_directory_headers[i].compression_method), 1, zip_file);
+        fwrite(&central_directory_headers[i].last_mod_file_time, sizeof(central_directory_headers[i].last_mod_file_time), 1, zip_file);
+        fwrite(&central_directory_headers[i].last_mod_file_date, sizeof(central_directory_headers[i].last_mod_file_date), 1, zip_file);
+        fwrite(&central_directory_headers[i].crc32, sizeof(central_directory_headers[i].crc32), 1, zip_file);
+        fwrite(&central_directory_headers[i].compressed_size, sizeof(central_directory_headers[i].compressed_size), 1, zip_file);
+        fwrite(&central_directory_headers[i].uncompressed_size, sizeof(central_directory_headers[i].uncompressed_size), 1, zip_file);
+        fwrite(&central_directory_headers[i].file_name_length, sizeof(central_directory_headers[i].file_name_length), 1, zip_file);
+        fwrite(&central_directory_headers[i].extra_field_length, sizeof(central_directory_headers[i].extra_field_length), 1, zip_file);
+        fwrite(&central_directory_headers[i].file_comment_length, sizeof(central_directory_headers[i].file_comment_length), 1, zip_file);
+        fwrite(&central_directory_headers[i].disk_number_start, sizeof(central_directory_headers[i].disk_number_start), 1, zip_file);
+        fwrite(&central_directory_headers[i].internal_file_attributes, sizeof(central_directory_headers[i].internal_file_attributes), 1, zip_file);
+        fwrite(&central_directory_headers[i].external_file_attributes, sizeof(central_directory_headers[i].external_file_attributes), 1, zip_file);
+        fwrite(&central_directory_headers[i].relative_offset_of_local_header, sizeof(central_directory_headers[i].relative_offset_of_local_header), 1, zip_file);
+
+        char *filename;
+        error err = string_array_get(files, i, &filename);
+        if(err != SUCCESS){
+            return err;
+        }
+        fwrite(filename, central_directory_headers[i].file_name_length, 1, zip_file);
+    }
+
+    end_of_central_directory_record_t eocd = {0};
     eocd.signature = ZIP_END_OF_CENTRAL_DIRECTORY_SIGNATURE;
-    eocd.total_number_of_entries_in_the_central_directory_on_this_disk = file_count;
-    eocd.total_number_of_entries_in_the_central_directory = file_count;
+    eocd.total_number_of_entries_in_the_central_directory_on_this_disk = files->size;
+    eocd.total_number_of_entries_in_the_central_directory = files->size;
     eocd.size_of_the_central_directory = central_directory_size;
     eocd.offset_of_start_of_central_directory_with_respect_to_the_starting_disk_number = central_directory_offset;
 
-    fwrite(&eocd, sizeof(eocd), 1, zip_file);
+    fwrite(&eocd.signature, sizeof(eocd.signature), 1, zip_file);
+    fwrite(&eocd.number_of_this_disk, sizeof(eocd.number_of_this_disk), 1, zip_file);
+    fwrite(&eocd.number_of_the_disk_with_the_start_of_the_central_directory, sizeof(eocd.number_of_the_disk_with_the_start_of_the_central_directory), 1, zip_file);
+    fwrite(&eocd.total_number_of_entries_in_the_central_directory_on_this_disk, sizeof(eocd.total_number_of_entries_in_the_central_directory_on_this_disk), 1, zip_file);
+    fwrite(&eocd.total_number_of_entries_in_the_central_directory, sizeof(eocd.total_number_of_entries_in_the_central_directory), 1, zip_file);
+    fwrite(&eocd.size_of_the_central_directory, sizeof(eocd.size_of_the_central_directory), 1, zip_file);
+    fwrite(&eocd.offset_of_start_of_central_directory_with_respect_to_the_starting_disk_number, sizeof(eocd.offset_of_start_of_central_directory_with_respect_to_the_starting_disk_number), 1, zip_file);
+    fwrite(&eocd.zip_file_comment_length, sizeof(eocd.zip_file_comment_length), 1, zip_file);
 
     fclose(zip_file);
+
+    return SUCCESS;
 }

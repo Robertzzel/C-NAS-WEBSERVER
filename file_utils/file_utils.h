@@ -11,9 +11,8 @@
 #include "stdint.h"
 #include "zip.h"
 #include "../s_socket.h"
+#include "../utils.h"
 
-void zip_directory(const char *directory, const char *zip_filename);
-void add_file_to_zip(zip_t *zip, const char *filename, const char *entryname);
+error write_zip_file(const char *zip_filename, array_of_strings_t* files);
 
-void write_zip_file(const char *zip_filename, const char **files, int file_count);
 #endif //UNTITLED_FILE_UTILS_H
