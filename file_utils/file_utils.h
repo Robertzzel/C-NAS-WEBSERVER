@@ -14,5 +14,6 @@
 #include "../utils.h"
 
 error write_zip_file(const char *zip_filename, array_of_strings_t* files);
+error write_zip_to_socket(array_of_strings_t* files, s_socket* socket);
 
 #endif //UNTITLED_FILE_UTILS_H

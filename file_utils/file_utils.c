@@ -271,3 +271,141 @@ error write_zip_file(const char *zip_filename, array_of_strings_t* files) {
 
     return SUCCESS;
 }
+
+error write_zip_to_socket(array_of_strings_t* files, s_socket* socket) {
+    local_file_header_t* local_files_headers = calloc(files->size, sizeof(local_file_header_t));
+    if(local_files_headers == NULL){
+        return FAIL;
+    }
+    central_directory_header_t* central_directory_headers = calloc(files->size, sizeof(central_directory_header_t));
+    if(central_directory_headers == NULL){
+        return FAIL;
+    }
+
+    unsigned int central_directory_offset = 0;
+    unsigned int central_directory_size = 0;
+    for (int i = 0; i < files->size; i++) {
+        char *filename;
+        error err = string_array_get(files, i, &filename);
+        if(err != SUCCESS){
+            return err;
+        }
+
+        uint32_t file_size;
+        err = get_file_size(filename, &file_size);
+        if(err != SUCCESS){
+            return err;
+        }
+
+        uint32_t crc = 0;
+        err = m_crc32(filename, &crc);
+        if(err != SUCCESS){
+            return err;
+        }
+
+        local_files_headers[i].signature = ZIP_LOCAL_FILE_HEADER_SIGNATURE;
+        local_files_headers[i].version_needed = 20;
+        local_files_headers[i].general_purpose_bit_flag = 0;
+        local_files_headers[i].compression_method = 0;  // STORE
+        local_files_headers[i].last_mod_file_time = 0;
+        local_files_headers[i].last_mod_file_date = 0;
+        local_files_headers[i].crc32 = crc;
+        local_files_headers[i].compressed_size = file_size;
+        local_files_headers[i].uncompressed_size = file_size;
+        local_files_headers[i].file_name_length = strlen(filename);
+        local_files_headers[i].extra_field_length = 0;
+
+        central_directory_headers[i].signature = ZIP_CENTRAL_DIRECTORY_HEADER_SIGNATURE;
+        central_directory_headers[i].version_made_by = 20;
+        central_directory_headers[i].version_needed = 20;
+        central_directory_headers[i].compression_method = 0;  // STORE
+        central_directory_headers[i].last_mod_file_time = 0;
+        central_directory_headers[i].last_mod_file_date = 0;
+        central_directory_headers[i].crc32 = crc;
+        central_directory_headers[i].compressed_size = file_size;
+        central_directory_headers[i].uncompressed_size = file_size;
+        central_directory_headers[i].file_name_length = strlen(filename);
+        central_directory_headers[i].relative_offset_of_local_header = central_directory_offset;
+
+        central_directory_offset += LOCAL_FILE_HEADER_SIZE + strlen(filename) + file_size;
+        central_directory_size += CENTRAL_DIRECTORY_HEADER_SIZE + strlen(filename);
+    }
+
+    for (int i = 0; i < files->size; i++) {
+        socket_write(socket, &local_files_headers[i].signature, sizeof(local_files_headers[i].signature), NULL);
+        socket_write(socket, &local_files_headers[i].version_needed, sizeof(local_files_headers[i].version_needed), NULL);
+        socket_write(socket, &local_files_headers[i].general_purpose_bit_flag, sizeof(local_files_headers[i].general_purpose_bit_flag), NULL);
+        socket_write(socket, &local_files_headers[i].compression_method, sizeof(local_files_headers[i].compression_method), NULL);
+        socket_write(socket, &local_files_headers[i].last_mod_file_time, sizeof(local_files_headers[i].last_mod_file_time), NULL);
+        socket_write(socket, &local_files_headers[i].last_mod_file_date, sizeof(local_files_headers[i].last_mod_file_date), NULL);
+        socket_write(socket, &local_files_headers[i].crc32, sizeof(local_files_headers[i].crc32), NULL);
+        socket_write(socket, &local_files_headers[i].compressed_size, sizeof(local_files_headers[i].compressed_size), NULL);
+        socket_write(socket, &local_files_headers[i].uncompressed_size, sizeof(local_files_headers[i].uncompressed_size), NULL);
+        socket_write(socket, &local_files_headers[i].file_name_length, sizeof(local_files_headers[i].file_name_length), NULL);
+        socket_write(socket, &local_files_headers[i].extra_field_length, sizeof(local_files_headers[i].extra_field_length), NULL);
+
+        char *filename;
+        error err = string_array_get(files, i, &filename);
+        if(err != SUCCESS){
+            return err;
+        }
+        socket_write(socket, filename, local_files_headers[i].file_name_length, NULL);
+
+        FILE* f = fopen(filename, "rb");
+        if(f == NULL){
+            return FAIL;
+        }
+        char buffer[1024];
+        size_t bytes_read = fread(buffer, 1, 1024, f);
+        while(bytes_read != 0){
+            socket_write(socket, buffer, bytes_read, NULL);
+            bytes_read = fread(buffer, 1, 1024, f);
+        }
+        fclose(f);
+    }
+
+    for (int i = 0; i < files->size; i++) {
+        socket_write(socket, &central_directory_headers[i].signature, sizeof(central_directory_headers[i].signature), NULL);
+        socket_write(socket, &central_directory_headers[i].version_made_by, sizeof(central_directory_headers[i].version_made_by), NULL);
+        socket_write(socket, &central_directory_headers[i].version_needed, sizeof(central_directory_headers[i].version_needed), NULL);
+        socket_write(socket, &central_directory_headers[i].general_purpose_bit_flag, sizeof(central_directory_headers[i].general_purpose_bit_flag),NULL);
+        socket_write(socket, &central_directory_headers[i].compression_method, sizeof(central_directory_headers[i].compression_method), NULL);
+        socket_write(socket, &central_directory_headers[i].last_mod_file_time, sizeof(central_directory_headers[i].last_mod_file_time), NULL);
+        socket_write(socket, &central_directory_headers[i].last_mod_file_date, sizeof(central_directory_headers[i].last_mod_file_date), NULL);
+        socket_write(socket, &central_directory_headers[i].crc32, sizeof(central_directory_headers[i].crc32), NULL);
+        socket_write(socket, &central_directory_headers[i].compressed_size, sizeof(central_directory_headers[i].compressed_size), NULL);
+        socket_write(socket, &central_directory_headers[i].uncompressed_size, sizeof(central_directory_headers[i].uncompressed_size), NULL);
+        socket_write(socket, &central_directory_headers[i].file_name_length, sizeof(central_directory_headers[i].file_name_length), NULL);
+        socket_write(socket, &central_directory_headers[i].extra_field_length, sizeof(central_directory_headers[i].extra_field_length), NULL);
+        socket_write(socket, &central_directory_headers[i].file_comment_length, sizeof(central_directory_headers[i].file_comment_length), NULL);
+        socket_write(socket, &central_directory_headers[i].disk_number_start, sizeof(central_directory_headers[i].disk_number_start), NULL);
+        socket_write(socket, &central_directory_headers[i].internal_file_attributes, sizeof(central_directory_headers[i].internal_file_attributes), NULL);
+        socket_write(socket, &central_directory_headers[i].external_file_attributes, sizeof(central_directory_headers[i].external_file_attributes), NULL);
+        socket_write(socket, &central_directory_headers[i].relative_offset_of_local_header, sizeof(central_directory_headers[i].relative_offset_of_local_header), NULL);
+
+        char *filename;
+        error err = string_array_get(files, i, &filename);
+        if(err != SUCCESS){
+            return err;
+        }
+        socket_write(socket, filename, central_directory_headers[i].file_name_length, NULL);
+    }
+
+    end_of_central_directory_record_t eocd = {0};
+    eocd.signature = ZIP_END_OF_CENTRAL_DIRECTORY_SIGNATURE;
+    eocd.total_number_of_entries_in_the_central_directory_on_this_disk = files->size;
+    eocd.total_number_of_entries_in_the_central_directory = files->size;
+    eocd.size_of_the_central_directory = central_directory_size;
+    eocd.offset_of_start_of_central_directory_with_respect_to_the_starting_disk_number = central_directory_offset;
+
+    socket_write(socket, &eocd.signature, sizeof(eocd.signature), NULL);
+    socket_write(socket, &eocd.number_of_this_disk, sizeof(eocd.number_of_this_disk), NULL);
+    socket_write(socket, &eocd.number_of_the_disk_with_the_start_of_the_central_directory, sizeof(eocd.number_of_the_disk_with_the_start_of_the_central_directory), NULL);
+    socket_write(socket, &eocd.total_number_of_entries_in_the_central_directory_on_this_disk, sizeof(eocd.total_number_of_entries_in_the_central_directory_on_this_disk), NULL);
+    socket_write(socket, &eocd.total_number_of_entries_in_the_central_directory, sizeof(eocd.total_number_of_entries_in_the_central_directory), NULL);
+    socket_write(socket, &eocd.size_of_the_central_directory, sizeof(eocd.size_of_the_central_directory), NULL);
+    socket_write(socket, &eocd.offset_of_start_of_central_directory_with_respect_to_the_starting_disk_number, sizeof(eocd.offset_of_start_of_central_directory_with_respect_to_the_starting_disk_number), NULL);
+    socket_write(socket, &eocd.zip_file_comment_length, sizeof(eocd.zip_file_comment_length), NULL);
+
+    return SUCCESS;
+}

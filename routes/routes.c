@@ -102,7 +102,7 @@ error handle_download_route(http_request_t* request, s_socket* conn) {
     string_array_new(&files);
     string_array_add(&files, "/home/robert/start.sh", strlen("/home/robert/start.sh"));
     string_array_add(&files, "/home/robert/Workspace/iommu.sh", strlen("/home/robert/Workspace/iommu.sh"));
-    write_zip_file("/home/robert/archive.zip", &files);
+    write_zip_to_socket(&files, conn);
     string_array_free(&files);
 
     socket_write(conn, "\r\n", 2, NULL);
