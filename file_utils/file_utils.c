@@ -5,89 +5,8 @@
 #include <string.h>
 #include "file_utils.h"
 #include <stdio.h>
-#include <zlib.h>
 #include <stdint.h>
-#include <sys/stat.h>
-#include <dirent.h>
-
-#define CHUNK 16384
-
-/* Write a file to the zip archive */
-//int write_file_to_zip(FILE *zip, const char *filename) {
-//    FILE *file = fopen(filename, "rb");
-//    if (!file) {
-//        perror("fopen");
-//        return -1;
-//    }
-//
-//    uint8_t out[CHUNK];
-//    z_stream strm = {0};
-//    deflateInit2(&strm, Z_DEFAULT_COMPRESSION, Z_DEFLATED, -MAX_WBITS, 8, Z_DEFAULT_STRATEGY);
-//
-//    // Read file and compress it
-//    int bytes_read;
-//    uint8_t in[CHUNK];
-//    while ((bytes_read = fread(in, 1, CHUNK, file)) > 0) {
-//        strm.avail_in = bytes_read;
-//        strm.next_in = in;
-//
-//        do {
-//            strm.avail_out = CHUNK;
-//            strm.next_out = out;
-//            deflate(&strm, Z_NO_FLUSH);
-//            fwrite(out, 1, CHUNK - strm.avail_out, zip);
-//        } while (strm.avail_out == 0);
-//    }
-//
-//    // Finish the compression
-//    do {
-//        strm.avail_out = CHUNK;
-//        strm.next_out = out;
-//        deflate(&strm, Z_FINISH);
-//        fwrite(out, 1, CHUNK - strm.avail_out, zip);
-//    } while (strm.avail_out == 0);
-//
-//    deflateEnd(&strm);
-//    fclose(file);
-//    return 0;
-//}
-//
-///* Write a directory to the zip archive */
-//void add_directory_to_zip(FILE *zip, const char *path) {
-//    DIR *dir = opendir(path);
-//    if (!dir) {
-//        perror("opendir");
-//        return;
-//    }
-//
-//    struct dirent *entry;
-//    while ((entry = readdir(dir)) != NULL) {
-//        if (entry->d_name[0] == '.') continue;
-//
-//        char full_path[1024];
-//        snprintf(full_path, sizeof(full_path), "%s/%s", path, entry->d_name);
-//
-//        struct stat st;
-//        if (stat(full_path, &st) == -1) {
-//            perror("stat");
-//            continue;
-//        }
-//
-//        if (S_ISDIR(st.st_mode)) {
-//            add_directory_to_zip(zip, full_path);
-//        } else {
-//            write_file_to_zip(zip, full_path);
-//        }
-//    }
-//    closedir(dir);
-//}
-
-
-//////////////////////////////
-
-#include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 
 #define ZIP_LOCAL_FILE_HEADER_SIGNATURE 0x04034b50
 #define ZIP_CENTRAL_DIRECTORY_HEADER_SIGNATURE 0x02014b50
@@ -109,34 +28,34 @@ typedef struct {
 } local_file_header_t;
 
 typedef struct {
-    unsigned int signature;
-    unsigned short version_made_by;
-    unsigned short version_needed;
-    unsigned short general_purpose_bit_flag;
-    unsigned short compression_method;
-    unsigned short last_mod_file_time;
-    unsigned short last_mod_file_date;
-    unsigned int crc32;
-    unsigned int compressed_size;
-    unsigned int uncompressed_size;
-    unsigned short file_name_length;
-    unsigned short extra_field_length;
-    unsigned short file_comment_length;
-    unsigned short disk_number_start;
-    unsigned short internal_file_attributes;
-    unsigned int external_file_attributes;
-    unsigned int relative_offset_of_local_header;
+    uint32_t signature;
+    uint16_t version_made_by;
+    uint16_t version_needed;
+    uint16_t general_purpose_bit_flag;
+    uint16_t compression_method;
+    uint16_t last_mod_file_time;
+    uint16_t last_mod_file_date;
+    uint32_t crc32;
+    uint32_t compressed_size;
+    uint32_t uncompressed_size;
+    uint16_t file_name_length;
+    uint16_t extra_field_length;
+    uint16_t file_comment_length;
+    uint16_t disk_number_start;
+    uint16_t internal_file_attributes;
+    uint32_t external_file_attributes;
+    uint32_t relative_offset_of_local_header;
 } CentralDirectoryHeader;
 
 typedef struct {
-    unsigned int signature;
-    unsigned short number_of_this_disk;
-    unsigned short number_of_the_disk_with_the_start_of_the_central_directory;
-    unsigned short total_number_of_entries_in_the_central_directory_on_this_disk;
-    unsigned short total_number_of_entries_in_the_central_directory;
-    unsigned int size_of_the_central_directory;
-    unsigned int offset_of_start_of_central_directory_with_respect_to_the_starting_disk_number;
-    unsigned short zip_file_comment_length;
+    uint32_t signature;
+    uint16_t number_of_this_disk;
+    uint16_t number_of_the_disk_with_the_start_of_the_central_directory;
+    uint16_t total_number_of_entries_in_the_central_directory_on_this_disk;
+    uint16_t total_number_of_entries_in_the_central_directory;
+    uint32_t size_of_the_central_directory;
+    uint32_t offset_of_start_of_central_directory_with_respect_to_the_starting_disk_number;
+    uint16_t zip_file_comment_length;
 } EndOfCentralDirectoryRecord;
 #pragma pack(pop)
 
