@@ -9,6 +9,7 @@
 #include "../http/http_request.h"
 #include "../http/http_response.h"
 #include "../html/html_files.h"
+#include "../file_utils/file_utils.h"
 
 error handle_root_route(http_request_t* request, s_socket* conn);
 error handle_not_found_route(http_request_t* request, s_socket* conn);

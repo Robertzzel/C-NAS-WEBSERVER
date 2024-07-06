@@ -63,7 +63,7 @@ error string_array_new(array_of_strings_t* array){
         return FAIL;
     }
     array->size = 0;
-    array->cap = STRING_ARRAY_INITIAL_DIMENSION;
+    array->cap = 0;
     return SUCCESS;
 }
 

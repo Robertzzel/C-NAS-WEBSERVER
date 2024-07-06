@@ -3,7 +3,8 @@
 //
 
 #include "routes.h"
-#define DOWNLOAD_BUFFER_SIZE (4 * 1024)
+#include "zlib.h"
+#define DOWNLOAD_BUFFER_SIZE (8 * 1024)
 
 error handle_root_route(http_request_t* request, s_socket* conn) {
     http_response_t response;
@@ -96,19 +97,14 @@ error handle_download_route(http_request_t* request, s_socket* conn) {
     }
 
     socket_write(conn, string, strlen(string) - 2, NULL);
-    FILE *f = fopen("/home/robert/Downloads/kali-linux-2024.1-virtualbox-amd64.7z", "r");
-    if(f == NULL) {
-        return FAIL;
-    }
-    char buffer[DOWNLOAD_BUFFER_SIZE];
-    size_t bytes_read = fread(buffer, 1, DOWNLOAD_BUFFER_SIZE, f);
-    while (bytes_read > 0){
-        socket_write(conn, buffer, bytes_read, NULL);
-        bytes_read = fread(buffer, 1, DOWNLOAD_BUFFER_SIZE, f);
-    }
-    socket_write(conn, "\r\n", 2, NULL);
 
-    fclose(f);
+    char* files[] = {
+            "/home/robert/start.sh",
+            "/home/robert/Workspace/iommu.sh"
+    };
+    write_zip_file("/home/robert/archive.zip", files, 2);
+
+    socket_write(conn, "\r\n", 2, NULL);
     free(string);
     http_response_free(&response);
 
