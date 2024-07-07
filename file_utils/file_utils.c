@@ -27,6 +27,7 @@
 #define ZIP_END_OF_CENTRAL_DIRECTORY_SIGNATURE 0x06054b50
 #define LOCAL_FILE_HEADER_SIZE 30
 #define CENTRAL_DIRECTORY_HEADER_SIZE 46
+#define READ_FILE_BUFFER (1024 * 16)
 
 error get_file_size(const char *filename, uint32_t* file_size) {
     FILE *file = fopen(filename, "rb");
@@ -40,8 +41,12 @@ error get_file_size(const char *filename, uint32_t* file_size) {
     }
 
     // Get the current position of the file pointer, which is the file size
-    uint32_t fileSize = ftell(file);
+    uint64_t fileSize = ftell(file);
     if (fileSize == -1) {
+        return FAIL;
+    }
+
+    if(fileSize > UINT32_MAX){
         return FAIL;
     }
 
@@ -109,16 +114,21 @@ error m_crc32(const char *filename, uint32_t *crc32) {
     long fileSize = ftell(file);
     rewind(file);
 
-    // Read the file backwards by iterating from end to start
-    for (long i = fileSize - 1; i >= 0; i--) {
-        int ch = fgetc(file);
-        // Print or process the character (you can modify this part)
-        crc ^= ch;
-        for (int _ = 0; _ < 8; ++_) {
-            if (crc & 1)
-                crc = (crc >> 1) ^ 0xEDB88320;
-            else
-                crc = crc >> 1;
+    char buffer[READ_FILE_BUFFER];
+    size_t bytes_read;
+    while((bytes_read = fread(buffer, READ_FILE_BUFFER, 1, file)) > 0) {
+        for (uint64_t i=0; i < bytes_read; ++i) {
+            crc ^= buffer[i];
+            if (crc & 1){
+                for (int _ = 0; _ < 8; ++_) {
+                    crc = (crc >> 1) ^ 0xEDB88320;
+                }
+            }
+            else {
+                for (int _ = 0; _ < 8; ++_) {
+                    crc = crc >> 1;
+                }
+            }
         }
     }
 
@@ -297,11 +307,16 @@ error write_zip_to_socket(array_of_strings_t* files, s_socket* socket) {
             return err;
         }
 
+        printf("Calculating crc for %s...\n", filename);
+        auto s = clock();
         uint32_t crc = 0;
         err = m_crc32(filename, &crc);
         if(err != SUCCESS){
             return err;
         }
+        auto e = clock();
+        double cpu_time_used = ((double) (e - s)) / CLOCKS_PER_SEC;
+        printf("%lf\n", cpu_time_used);
 
         local_files_headers[i].signature = ZIP_LOCAL_FILE_HEADER_SIGNATURE;
         local_files_headers[i].version_needed = 20;
@@ -355,12 +370,13 @@ error write_zip_to_socket(array_of_strings_t* files, s_socket* socket) {
         if(f == NULL){
             return FAIL;
         }
-        char buffer[1024];
-        size_t bytes_read = fread(buffer, 1, 1024, f);
-        while(bytes_read != 0){
+
+        char buffer[READ_FILE_BUFFER];
+        size_t bytes_read;
+        while((bytes_read = fread(buffer, 1, READ_FILE_BUFFER, f)) > 0){
             socket_write(socket, buffer, bytes_read, NULL);
-            bytes_read = fread(buffer, 1, 1024, f);
         }
+
         fclose(f);
     }
 
