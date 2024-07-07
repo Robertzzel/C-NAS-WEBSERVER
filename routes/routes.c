@@ -100,17 +100,22 @@ error handle_download_route(http_request_t* request, s_socket* conn) {
 
     array_of_strings_t files;
     string_array_new(&files);
-    //string_array_add(&files, "/home/robert/start.sh", strlen("/home/robert/start.sh"));
-    //string_array_add(&files, "/home/robert/Workspace/iommu.sh", strlen("/home/robert/Workspace/iommu.sh"));
-    //string_array_add(&files, "/home/robert/Downloads/virtio-win-0.1.240.iso", strlen("/home/robert/Downloads/virtio-win-0.1.240.iso"));
-    string_array_add(&files, "/home/robert/Downloads/Win11_23H2_English_x64v2.iso", strlen("/home/robert/Downloads/Win11_23H2_English_x64v2.iso"));
+    /// TOATE FISIERELE CITECT DOAR DIN PRIMUL FISIER
+    char name1[] = "/home/robert/Downloads/Raspunsuri.txt";
+    char name2[] = "/home/robert/Downloads/Sisteme de Prelucrare Grafica.rar";
+    string_array_add(&files, name1, strlen(name1));
+    string_array_add(&files, name2, strlen(name2));
+
+
+//    string_array_add(&files, "/home/robert/start.sh", strlen("/home/robert/start.sh"));
+//    string_array_add(&files, "/home/robert/Workspace/iommu.sh", strlen("/home/robert/Workspace/iommu.sh"));
     err = write_zip_to_socket(&files, conn);
     if(err != SUCCESS){
         return err;
     }
     string_array_free(&files);
 
-    socket_write(conn, "\r\n", 2, NULL);
+    //socket_write(conn, "\r\n", 2, NULL);
     free(string);
     http_response_free(&response);
 
