@@ -1,10 +1,10 @@
-#include "s_socket.h"
+#include "socket_t.h"
 #include "http/http_request.h"
 #include "html/html_files.h"
 #include "routes/routes.h"
 #define BUFFER_SIZE 1024
 #include "stdio.h"
-error handle_client(http_request_t* request, s_socket* conn);
+error handle_client(http_request_t* request, socket_t* conn);
 
 int main(int argc, char *argv[]) {
     if(argc != 5) {
@@ -24,26 +24,26 @@ int main(int argc, char *argv[]) {
     char* private_key_file_path = argv[4];
 
     struct ssl_ctx_st *context;
-    int err = socket_create_context(&context, certificate_file_path, private_key_file_path, 1);
+    int err = socket_t__create_context(&context, certificate_file_path, private_key_file_path, 1);
     if(err != 0){
         printf("Cannot create context\n");
         return 1;
     }
 
-    s_socket s;
-    err = socket_create(&s, IPv4, STREAM, context);
+    socket_t s;
+    err = socket_t__new(&s, IPv4, STREAM, context);
     if(err != 0){
         printf("Cannot create socket\n");
         return 1;
     }
 
-    err = socket_bind(&s, server_host, server_port);
+    err = socket_t__bind(&s, server_host, server_port);
     if(err != 0){
         printf("Cannot bnd socket\n");
         return 1;
     }
 
-    err = socket_listen(&s, 1);
+    err = socket_t__listen(&s, 1);
     if(err != 0){
         printf("Cannot listen socket\n");
         return 1;
@@ -51,15 +51,15 @@ int main(int argc, char *argv[]) {
 
     char buffer[BUFFER_SIZE];
     while(1) {
-        s_socket client;
-        err = socket_accept(&s, &client);
+        socket_t client;
+        err = socket_t__accept(&s, &client);
         if(err != 0){
             printf("Cannot accept sockt\n");
             break;
         }
 
         unsigned long read;
-        err = socket_read(&client, buffer, BUFFER_SIZE, &read);
+        err = socket_t__read(&client, buffer, BUFFER_SIZE, &read);
         if(err != 0){
             printf("Cannot read socket\n");
             break;
@@ -67,24 +67,24 @@ int main(int argc, char *argv[]) {
         buffer[read] = 0;
 
         http_request_t request;
-        err = http_request_from_bytes(buffer, &request);
+        err = http_request_t__from_bytes(buffer, &request);
         if(err != 0) {
             break;
         }
 
         handle_client(&request, &client);
 
-        socket_close(&client);
-        http_request_free(&request);
+        socket_t__close(&client);
+        http_request_t__free(&request);
     }
 
-    socket_close(&s);
+    socket_t__close(&s);
     SSL_CTX_free(context);
 
     return 0;
 }
 
-error handle_client(http_request_t* request, s_socket* conn) {
+error handle_client(http_request_t* request, socket_t* conn) {
     if(strcmp(request->uri, "/") == 0) {
         return handle_root_route(request, conn);
     } else if(strcmp(request->uri, "/download") == 0) {

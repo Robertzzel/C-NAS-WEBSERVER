@@ -4,17 +4,17 @@
 
 #include "http_response.h"
 
-error http_response_new(http_response_t* response){
+error http_response_t__new(http_response_t* response){
     response->body = NULL;
     response->version = strdup("HTTP/1.1");
     if(response->version == NULL) {
         return FAIL;
     }
-    error err = string_array_new(&response->header_names);
+    error err = list_strings_t__new(&response->header_names);
     if(err != SUCCESS){
         return err;
     }
-    err = string_array_new(&response->header_values);
+    err = list_strings_t__new(&response->header_values);
     if(err != SUCCESS){
         return err;
     }
@@ -22,19 +22,19 @@ error http_response_new(http_response_t* response){
     return SUCCESS;
 }
 
-error http_response_free(http_response_t* response){
+error http_response_t__free(http_response_t* response){
     if(response->body != NULL) {
         free(response->body);
     }
     if(response->version != NULL) {
         free(response->version);
     }
-    string_array_free(&response->header_names);
-    string_array_free(&response->header_values);
+    list_strings_t__free(&response->header_names);
+    list_strings_t__free(&response->header_values);
     return SUCCESS;
 }
 
-error http_response_set_version(http_response_t* response, char* version){
+error http_response_t__set_version(http_response_t* response, char* version){
     response->version = strdup(version);
     if(response->version == NULL){
         return FAIL;
@@ -42,7 +42,7 @@ error http_response_set_version(http_response_t* response, char* version){
     return SUCCESS;
 }
 
-error http_response_set_status(http_response_t* response, int status){
+error http_response_t__set_status(http_response_t* response, int status){
     if(status < 100 || status > 599) {
         return FAIL;
     }
@@ -50,7 +50,7 @@ error http_response_set_status(http_response_t* response, int status){
     return SUCCESS;
 }
 
-error http_response_set_body(http_response_t* response, char* body){
+error http_response_t__set_body(http_response_t* response, char* body){
     response->body = strdup(body);
     if(response->body == NULL){
         return FAIL;
@@ -59,16 +59,16 @@ error http_response_set_body(http_response_t* response, char* body){
     return SUCCESS;
 }
 
-error http_response_add_header(http_response_t* response, char* name, char* value) {
+error http_response_t__add_header(http_response_t* response, char* name, char* value) {
     int i;
     for(i=0;i<response->header_names.size;++i){
         char* header_name = NULL;
-        error err = string_array_get(&(response->header_names), i, &header_name);
+        error err = list_strings_t__get(&(response->header_names), i, &header_name);
         if(err != SUCCESS){
             return FAIL;
         }
         if(strcmp(name, header_name) == 0) {
-            err = string_array_replace(&response->header_values, i, value, strlen(value));
+            err = list_strings_t__replace(&response->header_values, i, value, strlen(value));
             if(err != SUCCESS) {
                 return err;
             }
@@ -76,18 +76,18 @@ error http_response_add_header(http_response_t* response, char* name, char* valu
         }
     }
 
-    error err = string_array_add(&response->header_names, name, strlen(name));
+    error err = list_strings_t__add(&response->header_names, name, strlen(name));
     if(err != SUCCESS){
         return err;
     }
-    err = string_array_add(&response->header_values, value, strlen(value));
+    err = list_strings_t__add(&response->header_values, value, strlen(value));
     if(err != SUCCESS){
         return err;
     }
     return SUCCESS;
 }
 
-error http_response_to_bytes(http_response_t* response, char** string) {
+error http_response_t__to_bytes(http_response_t* response, char** string) {
     unsigned long response_size = 0;
     // response line
     response_size += strlen(response->version) + 1;
@@ -98,11 +98,11 @@ error http_response_to_bytes(http_response_t* response, char** string) {
     int i = 0;
     for(i=0;i<response->header_names.size;++i){
         char *name, *value;
-        error err = string_array_get(&response->header_names, i, &name);
+        error err = list_strings_t__get(&response->header_names, i, &name);
         if(err != SUCCESS){
             return err;
         }
-        err = string_array_get(&response->header_values, i, &value);
+        err = list_strings_t__get(&response->header_values, i, &value);
         if(err != SUCCESS){
             return err;
         }
@@ -133,11 +133,11 @@ error http_response_to_bytes(http_response_t* response, char** string) {
 
     for(i=0;i<response->header_names.size;++i){
         char *name, *value;
-        error err = string_array_get(&response->header_names, i, &name);
+        error err = list_strings_t__get(&response->header_names, i, &name);
         if(err != SUCCESS){
             return err;
         }
-        err = string_array_get(&response->header_values, i, &value);
+        err = list_strings_t__get(&response->header_values, i, &value);
         if(err != SUCCESS){
             return err;
         }
@@ -156,40 +156,40 @@ error http_response_to_bytes(http_response_t* response, char** string) {
     return SUCCESS;
 }
 
-error http_response_write_to_socket(http_response_t* response, s_socket* socket, int write_body) {
-    socket_write(socket, response->version, strlen(response->version), NULL);
-    socket_write(socket, " ", 1, NULL);
+error http_response_t__write_to_socket(http_response_t* response, socket_t* socket, int write_body) {
+    socket_t__write(socket, response->version, strlen(response->version), NULL);
+    socket_t__write(socket, " ", 1, NULL);
     char status[4];
     sprintf(status, "%d", response->status);
-    socket_write(socket, status, 3, NULL);
-    socket_write(socket, " OK\r\n", 5, NULL);
+    socket_t__write(socket, status, 3, NULL);
+    socket_t__write(socket, " OK\r\n", 5, NULL);
 
     for(int i=0;i<response->header_names.size;++i){
         char *name, *value;
-        error err = string_array_get(&response->header_names, i, &name);
+        error err = list_strings_t__get(&response->header_names, i, &name);
         if(err != SUCCESS){
             return err;
         }
-        err = string_array_get(&response->header_values, i, &value);
+        err = list_strings_t__get(&response->header_values, i, &value);
         if(err != SUCCESS){
             return err;
         }
-        socket_write(socket, name, strlen(name), NULL);
-        socket_write(socket, ": ", 2, NULL);
-        socket_write(socket, value, strlen(value), NULL);
-        socket_write(socket, "\r\n", 2, NULL);
+        socket_t__write(socket, name, strlen(name), NULL);
+        socket_t__write(socket, ": ", 2, NULL);
+        socket_t__write(socket, value, strlen(value), NULL);
+        socket_t__write(socket, "\r\n", 2, NULL);
     }
-    socket_write(socket, "\r\n", 2, NULL);
+    socket_t__write(socket, "\r\n", 2, NULL);
 
     if(write_body == 0){
         return SUCCESS;
     }
 
     if(response->body != NULL){
-        socket_write(socket, response->body, strlen(response->body), NULL);
+        socket_t__write(socket, response->body, strlen(response->body), NULL);
     }
 
-    socket_write(socket, "\r\n", 2, NULL);
+    socket_t__write(socket, "\r\n", 2, NULL);
 
     return SUCCESS;
 }

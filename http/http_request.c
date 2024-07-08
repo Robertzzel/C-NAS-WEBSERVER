@@ -8,33 +8,33 @@ error parse_http_header(char *line, http_request_t *request);
 error parse_http_request_line(char *line, http_request_t *request);
 error http_request_init(http_request_t *request);
 
-error http_request_from_bytes(char* message, http_request_t *request) {
+error http_request_t__from_bytes(char* message, http_request_t *request) {
     error err = http_request_init(request);
     if(err != SUCCESS) {
         return err;
     }
 
-    array_of_strings_t parts;
+    list_strings_t parts;
     err = string_split(message, HTTP_MESSAGE_DELIMITER, &parts);
     if(err != SUCCESS){
         return err;
     }
 
     char *request_line = NULL;
-    err = string_array_get(&parts, 0, &request_line);
+    err = list_strings_t__get(&parts, 0, &request_line);
     if(err != SUCCESS){
         return err;
     }
 
     err = parse_http_request_line(request_line, request);
     if(err != SUCCESS) {
-        string_array_free(&parts);
+        list_strings_t__free(&parts);
         return err;
     }
 
     for(int i = 1; i < parts.size - 1; ++i) {
         char *header_line = NULL;
-        err = string_array_get(&parts, i, &header_line);
+        err = list_strings_t__get(&parts, i, &header_line);
         if(err != SUCCESS){
             return err;
         }
@@ -45,7 +45,7 @@ error http_request_from_bytes(char* message, http_request_t *request) {
     }
 
     char* last_part = NULL;
-    err = string_array_get(&parts, parts.size-1, &last_part);
+    err = list_strings_t__get(&parts, parts.size - 1, &last_part);
     if(err != SUCCESS){
         return FAIL;
     }
@@ -54,7 +54,7 @@ error http_request_from_bytes(char* message, http_request_t *request) {
         return FAIL;
     }
 
-    string_array_free(&parts);
+    list_strings_t__free(&parts);
     return SUCCESS;
 }
 
@@ -64,7 +64,7 @@ error parse_http_header(char *line, http_request_t *request) {
         return FAIL;
     }
     long delimiter_index = delimiter-line;
-    error err = string_array_add(&request->header_names, line, delimiter_index);
+    error err = list_strings_t__add(&request->header_names, line, delimiter_index);
     if(err != SUCCESS){
         return err;
     }
@@ -80,7 +80,7 @@ error parse_http_header(char *line, http_request_t *request) {
         return err;
     }
 
-    err = string_array_add(&request->headers_values, value, value_end_index);
+    err = list_strings_t__add(&request->headers_values, value, value_end_index);
     if(err != SUCCESS){
         return err;
     }
@@ -122,7 +122,7 @@ error parse_http_request_line(char* line, http_request_t *request) {
     return SUCCESS;
 }
 
-error http_request_free(http_request_t *request){
+error http_request_t__free(http_request_t *request){
     if(request->method != NULL){
         free(request->method);
         request->method = NULL;
@@ -139,8 +139,8 @@ error http_request_free(http_request_t *request){
         free(request->body);
         request->body = NULL;
     }
-    string_array_free(&request->header_names);
-    string_array_free(&request->headers_values);
+    list_strings_t__free(&request->header_names);
+    list_strings_t__free(&request->headers_values);
 
     return SUCCESS;
 }
@@ -149,11 +149,11 @@ error http_request_init(http_request_t *request) {
     request->method = NULL;
     request->uri = NULL;
     request->version = NULL;
-    error err = string_array_new(&request->header_names);
+    error err = list_strings_t__new(&request->header_names);
     if(err != SUCCESS){
         return err;
     }
-    err = string_array_new(&request->headers_values);
+    err = list_strings_t__new(&request->headers_values);
     if(err != SUCCESS){
         return err;
     }

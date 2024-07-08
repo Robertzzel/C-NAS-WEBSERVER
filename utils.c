@@ -28,17 +28,17 @@ error trim_whitespace(char *str, char** new_str, int* length) {
     return SUCCESS;
 }
 
-error string_split(char* string, char* delimiter, array_of_strings_t* parts) {
-    error err = string_array_new(parts);
+error string_split(char* string, char* delimiter, list_strings_t* parts) {
+    error err = list_strings_t__new(parts);
     if(err != SUCCESS){
         return err;
     }
 
     char* substring = NULL;
     while((substring = strstr(string, delimiter)) != NULL) {
-        err = string_array_add(parts, string, substring-string);
+        err = list_strings_t__add(parts, string, substring - string);
         if(err != SUCCESS){
-            string_array_free(parts);
+            list_strings_t__free(parts);
             return err;
         }
         string = substring + strlen(delimiter);
@@ -46,7 +46,7 @@ error string_split(char* string, char* delimiter, array_of_strings_t* parts) {
     return SUCCESS;
 }
 
-error string_array_new(array_of_strings_t* array){
+error list_strings_t__new(list_strings_t* array){
     array->array = malloc(sizeof(char*) * STRING_ARRAY_INITIAL_DIMENSION);
     if(array->array == NULL) {
         return FAIL;
@@ -56,7 +56,7 @@ error string_array_new(array_of_strings_t* array){
     return SUCCESS;
 }
 
-error string_array_add(array_of_strings_t* array, char* new_string, unsigned long length) {
+error list_strings_t__add(list_strings_t* array, char* new_string, unsigned long length) {
     if(array->size >= array->cap) {
         array->array = realloc(array->array, sizeof(char*) * (array->cap + STRING_ARRAY_INITIAL_DIMENSION));
         if(array->array == NULL){
@@ -72,7 +72,7 @@ error string_array_add(array_of_strings_t* array, char* new_string, unsigned lon
     return SUCCESS;
 }
 
-error string_array_replace(array_of_strings_t* array, int index, char* new_string, unsigned long length) {
+error list_strings_t__replace(list_strings_t* array, int index, char* new_string, unsigned long length) {
     if(index >= array->size || index < 0) {
         return FAIL;
     }
@@ -86,7 +86,7 @@ error string_array_replace(array_of_strings_t* array, int index, char* new_strin
     return SUCCESS;
 }
 
-error string_array_delete(array_of_strings_t* array, int index) {
+error list_strings_t__delete(list_strings_t* array, int index) {
     if(index >= array->size || index < 0) {
         return FAIL;
     }
@@ -110,7 +110,7 @@ error string_array_delete(array_of_strings_t* array, int index) {
     return SUCCESS;
 }
 
-error string_array_get(array_of_strings_t* array, int index, char** element) {
+error list_strings_t__get(list_strings_t* array, int index, char** element) {
     if(index >= array->size || index < 0) {
         return FAIL;
     }
@@ -118,7 +118,7 @@ error string_array_get(array_of_strings_t* array, int index, char** element) {
     return SUCCESS;
 }
 
-error string_array_free(array_of_strings_t* array){
+error list_strings_t__free(list_strings_t* array){
     int i = 0;
     for(i=0; i< array->size; ++i){
         free(array->array[i]);

@@ -10,10 +10,10 @@
 #include "stdio.h"
 #include "stdint.h"
 #include "zip.h"
-#include "../s_socket.h"
+#include "../socket_t.h"
 #include "../utils.h"
 
-error write_zip_file(const char *zip_filename, array_of_strings_t* files);
-error write_zip_to_socket(array_of_strings_t* files, s_socket* socket);
+error write_zip_file(const char *zip_filename, list_strings_t* files);
+error write_zip_to_socket(list_strings_t* files, socket_t* socket);
 
 #endif //UNTITLED_FILE_UTILS_H

@@ -1,14 +1,14 @@
 //
 // Created by robert on 6/15/24.
 //
-#include "s_socket.h"
+#include "socket_t.h"
 
 in_addr_t socket_resolve_hostname(const char *hostname);
 int get_address(const char* host, int port, struct sockaddr_in* addr);
 
-int socket_create(s_socket* s_socket, domain domain, type type, struct ssl_ctx_st *ssl_context){
+error socket_t__new(socket_t* s_socket, domain domain, type type, struct ssl_ctx_st *ssl_context){
     if(s_socket == NULL || ssl_context == NULL) {
-        return 1;
+        return FAIL;
     }
 
     s_socket->ssl_socket = NULL;
@@ -16,28 +16,28 @@ int socket_create(s_socket* s_socket, domain domain, type type, struct ssl_ctx_s
 
     s_socket->socketfd = socket(domain, type, 0);
     if(s_socket->socketfd == -1) {
-        return 1;
+        return FAIL;
     }
 
     setsockopt(s_socket->socketfd, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int));
 
-    return 0;
+    return SUCCESS;
 }
 
-int socket_connect(s_socket* s_socket, const char* host, int port){
+error socket_t__connect(socket_t* s_socket, const char* host, int port){
     if(s_socket == NULL || host == NULL) {
-        return 1;
+        return FAIL;
     }
 
     struct sockaddr_in addr;
     int err = get_address(host, port, &addr);
     if(err != 0){
-        return 1;
+        return FAIL;
     }
 
     err = connect(s_socket->socketfd, (struct sockaddr *)&addr, sizeof(addr));
     if (err < 0) {
-        return 1;
+        return FAIL;
     }
 
     s_socket->ssl_socket = SSL_new(s_socket->ssl_context);
@@ -46,39 +46,42 @@ int socket_connect(s_socket* s_socket, const char* host, int port){
     err = SSL_connect(s_socket->ssl_socket);
     if (err <= 0) {
         ERR_print_errors_fp(stderr);
-        return 1;
+        return FAIL;
     }
-    return 0;
+    return SUCCESS;
 }
 
-int socket_bind(s_socket* s_socket, const char* host, int port){
-    if(s_socket == NULL || host == NULL) {
-        return 1;
+error socket_t__bind(socket_t* m_socket, const char* host, int port){
+    if(m_socket == NULL || host == NULL) {
+        return FAIL;
     }
 
     struct sockaddr_in addr;
     int err = get_address(host, port, &addr);
     if(err != 0){
-        return 1;
+        return err;
     }
 
-    if (bind(s_socket->socketfd, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-        return 1;
+    if (bind(m_socket->socketfd, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+        return FAIL;
     }
 
-    return 0;
+    return SUCCESS;
 }
 
-int socket_listen(s_socket* s_socket, int n){
-    if(s_socket == NULL) {
-        return 1;
+error socket_t__listen(socket_t* m_socket, int n){
+    if(m_socket == NULL) {
+        return FAIL;
     }
-    return listen(s_socket->socketfd, n);
+    if(listen(m_socket->socketfd, n) == -1){
+        return FAIL;
+    }
+    return SUCCESS;
 }
 
-int socket_accept(s_socket* listening_socket, s_socket* new_socket){
+error socket_t__accept(socket_t* listening_socket, socket_t* new_socket){
     if(listening_socket == NULL || new_socket == NULL){
-        return 1;
+        return FAIL;
     }
 
     new_socket->ssl_socket = NULL;
@@ -93,54 +96,54 @@ int socket_accept(s_socket* listening_socket, s_socket* new_socket){
 
     if (SSL_accept(new_socket->ssl_socket) <= 0) {
         ERR_print_errors_fp(stderr);
-        return 1;
+        return FAIL;
     }
 
-    return 0;
+    return SUCCESS;
 }
 
-int socket_write(s_socket* s_socket, char* buffer, unsigned long buffer_size, unsigned long* bytes_written){
+error socket_t__write(socket_t* s_socket, void* buffer, unsigned long buffer_size, unsigned long* bytes_written){
     if(s_socket == NULL || buffer == NULL){
-        return 1;
+        return FAIL;
     }
 
     int err = SSL_write(s_socket->ssl_socket, buffer, buffer_size);
     if(err > 0 && bytes_written != NULL){
         *bytes_written = err;
     } else if(err <= 0) {
-        return 1;
+        return FAIL;
     }
-    return 0;
+    return SUCCESS;
 }
 
-int socket_read(s_socket* s_socket, char* buffer, unsigned long buffer_size, unsigned long* bytes_read){
+error socket_t__read(socket_t* s_socket, void* buffer, unsigned long buffer_size, unsigned long* bytes_read){
     if(s_socket == NULL || buffer == NULL){
-        return 1;
+        return FAIL;
     }
 
     int err = SSL_read(s_socket->ssl_socket, buffer, buffer_size);
     if(err > 0 && bytes_read != NULL){
         *bytes_read = err;
     } else if(err <= 0) {
-        return 1;
+        return FAIL;
     }
 
-    return 0;
+    return SUCCESS;
 }
 
-int socket_close(s_socket* s_socket){
-    if(s_socket == NULL) {
-        return 1;
+error socket_t__close(socket_t* m_socket){
+    if(m_socket == NULL) {
+        return FAIL;
     }
 
-    if(s_socket->ssl_socket != NULL){
-        SSL_shutdown(s_socket->ssl_socket);
-        SSL_free(s_socket->ssl_socket);
-        s_socket->ssl_socket = NULL;
+    if(m_socket->ssl_socket != NULL){
+        SSL_shutdown(m_socket->ssl_socket);
+        SSL_free(m_socket->ssl_socket);
+        m_socket->ssl_socket = NULL;
     }
 
-    close(s_socket->socketfd);
-    return 0;
+    close(m_socket->socketfd);
+    return SUCCESS;
 }
 
 int get_address(const char* host, int port, struct sockaddr_in* addr) {
@@ -180,7 +183,7 @@ in_addr_t socket_resolve_hostname(const char *hostname) {
     return addr;
 }
 
-int socket_create_context(SSL_CTX** context, const char* certificate_file, const char* private_key_file, int for_server)
+error socket_t__create_context(SSL_CTX** context, const char* certificate_file, const char* private_key_file, int for_server)
 {
     const SSL_METHOD *method;
 
@@ -191,20 +194,19 @@ int socket_create_context(SSL_CTX** context, const char* certificate_file, const
     }
     *context = SSL_CTX_new(method);
     if (!*context) {
-        return 1;
+        return FAIL;
     }
 
     int err = SSL_CTX_use_certificate_file(*context, certificate_file, SSL_FILETYPE_PEM);
     if (err <= 0) {
-        ERR_print_errors_fp(stderr);
-        return 1;
+        //ERR_print_errors_fp(stderr);
+        return FAIL;
     }
 
     err = SSL_CTX_use_PrivateKey_file(*context, private_key_file, SSL_FILETYPE_PEM);
     if (err <= 0 ) {
-        ERR_print_errors_fp(stderr);
-        return 1;
+        return FAIL;
     }
 
-    return 0;
+    return SUCCESS;
 }

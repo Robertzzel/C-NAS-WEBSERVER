@@ -15,11 +15,11 @@ typedef struct {
     char* method;
     char* uri;
     char* version;
-    array_of_strings_t header_names;
-    array_of_strings_t headers_values;
+    list_strings_t header_names;
+    list_strings_t headers_values;
     char* body;
 } http_request_t;
 
-error http_request_from_bytes(char* message, http_request_t *request);
-error http_request_free(http_request_t *request);
+error http_request_t__from_bytes(char* message, http_request_t *request);
+error http_request_t__free(http_request_t *request);
 #endif //UNTITLED_HTTP_REQUEST_H

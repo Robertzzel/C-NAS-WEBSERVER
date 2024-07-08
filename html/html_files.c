@@ -6,7 +6,7 @@
 
 
 
-error write_home_page_to_socket(s_socket* socket) {
+error write_home_page_to_socket(socket_t* socket) {
     TMPL_varlist *mylist;
     mylist = TMPL_add_var(0, "y", "sdsd", "x", "aa", 0 );
 
@@ -21,7 +21,7 @@ error write_home_page_to_socket(s_socket* socket) {
     char buffer[64];
     size_t bytes_read = fread(&buffer[0], 1, 64, f);
     while(bytes_read != 0) {
-        socket_write(socket, buffer, bytes_read, NULL);
+        socket_t__write(socket, buffer, bytes_read, NULL);
         bytes_read = fread(buffer, 1, 64, f);
     }
 

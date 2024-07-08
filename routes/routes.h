@@ -11,8 +11,8 @@
 #include "../html/html_files.h"
 #include "../file_utils/file_utils.h"
 
-error handle_root_route(http_request_t* request, s_socket* conn);
-error handle_not_found_route(http_request_t* request, s_socket* conn);
-error handle_download_route(http_request_t* request, s_socket* conn);
+error handle_root_route(http_request_t* request, socket_t* conn);
+error handle_not_found_route(http_request_t* request, socket_t* conn);
+error handle_download_route(http_request_t* request, socket_t* conn);
 
 #endif //UNTITLED_ROUTES_H

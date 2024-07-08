@@ -4,23 +4,22 @@
 
 #include "routes.h"
 #include "zlib.h"
-#define DOWNLOAD_BUFFER_SIZE (8 * 1024)
 
-error handle_root_route(http_request_t* request, s_socket* conn) {
+error handle_root_route(http_request_t* request, socket_t* conn) {
     http_response_t response;
-    error err = http_response_new(&response);
+    error err = http_response_t__new(&response);
     if(err != SUCCESS) {
         return err;
     }
-    err = http_response_set_status(&response, 200);
+    err = http_response_t__set_status(&response, 200);
     if(err != SUCCESS) {
         return err;
     }
-    err = http_response_add_header(&response, "Content-Type", "text/html; charset=UTF-8");
+    err = http_response_t__add_header(&response, "Content-Type", "text/html; charset=UTF-8");
     if(err != SUCCESS) {
         return err;
     }
-    err = http_response_add_header(&response, "Connection", "close");
+    err = http_response_t__add_header(&response, "Connection", "close");
     if(err != SUCCESS) {
         return err;
     }
@@ -29,95 +28,91 @@ error handle_root_route(http_request_t* request, s_socket* conn) {
         return err;
     }
     char* string;
-    err = http_response_to_bytes(&response, &string);
+    err = http_response_t__to_bytes(&response, &string);
     if(err != SUCCESS) {
         return err;
     }
 
-    socket_write(conn, string, strlen(string), NULL);
-    http_response_free(&response);
+    socket_t__write(conn, string, strlen(string), NULL);
+    http_response_t__free(&response);
     free(string);
 
     return SUCCESS;
 }
 
-error handle_not_found_route(http_request_t* request, s_socket* conn) {
+error handle_not_found_route(http_request_t* request, socket_t* conn) {
     http_response_t response;
-    error err = http_response_new(&response);
+    error err = http_response_t__new(&response);
     if(err != SUCCESS) {
         return err;
     }
-    err = http_response_set_status(&response, 404);
+    err = http_response_t__set_status(&response, 404);
     if(err != SUCCESS) {
         return err;
     }
-    err = http_response_add_header(&response, "Connection", "close");
+    err = http_response_t__add_header(&response, "Connection", "close");
     if(err != SUCCESS) {
         return err;
     }
 
     char* string;
-    err = http_response_to_bytes(&response, &string);
+    err = http_response_t__to_bytes(&response, &string);
     if(err != SUCCESS) {
         return err;
     }
 
-    socket_write(conn, string, strlen(string), NULL);
+    socket_t__write(conn, string, strlen(string), NULL);
     free(string);
-    http_response_free(&response);
+    http_response_t__free(&response);
     return SUCCESS;
 }
 
-error handle_download_route(http_request_t* request, s_socket* conn) {
+error handle_download_route(http_request_t* request, socket_t* conn) {
     http_response_t response;
-    error err = http_response_new(&response);
+    error err = http_response_t__new(&response);
     if(err != SUCCESS) {
         return err;
     }
-    err = http_response_set_status(&response, 200);
+    err = http_response_t__set_status(&response, 200);
     if(err != SUCCESS) {
         return err;
     }
-    err = http_response_add_header(&response, "Connection", "close");
+    err = http_response_t__add_header(&response, "Connection", "close");
     if(err != SUCCESS) {
         return err;
     }
-    err = http_response_add_header(&response, "Content-Type", "application/octet-stream");
+    err = http_response_t__add_header(&response, "Content-Type", "application/octet-stream");
     if(err != SUCCESS) {
         return err;
     }
-    err = http_response_add_header(&response, "Content-Disposition", "attachment; filename=\"hello\"");
+    err = http_response_t__add_header(&response, "Content-Disposition", "attachment; filename=\"hello\"");
     if(err != SUCCESS) {
         return err;
     }
     char* string;
-    err = http_response_to_bytes(&response, &string);
+    err = http_response_t__to_bytes(&response, &string);
     if(err != SUCCESS) {
         return err;
     }
 
-    socket_write(conn, string, strlen(string) - 2, NULL);
+    socket_t__write(conn, string, strlen(string) - 2, NULL);
 
-    array_of_strings_t files;
-    string_array_new(&files);
-    /// TOATE FISIERELE CITECT DOAR DIN PRIMUL FISIER
-    char name1[] = "/home/robert/Downloads/Raspunsuri.txt";
+    list_strings_t files;
+    list_strings_t__new(&files);
+
+    char name1[] = "/home/robert/Downloads/kali-linux-2024.1-virtualbox-amd64.7z";
     char name2[] = "/home/robert/Downloads/Sisteme de Prelucrare Grafica.rar";
-    string_array_add(&files, name1, strlen(name1));
-    string_array_add(&files, name2, strlen(name2));
-
-
-//    string_array_add(&files, "/home/robert/start.sh", strlen("/home/robert/start.sh"));
-//    string_array_add(&files, "/home/robert/Workspace/iommu.sh", strlen("/home/robert/Workspace/iommu.sh"));
+    list_strings_t__add(&files, name1, strlen(name1));
+    list_strings_t__add(&files, name2, strlen(name2));
     err = write_zip_to_socket(&files, conn);
     if(err != SUCCESS){
         return err;
     }
-    string_array_free(&files);
+    list_strings_t__free(&files);
 
-    //socket_write(conn, "\r\n", 2, NULL);
+    //socket_t__write(conn, "\r\n", 2, NULL);
     free(string);
-    http_response_free(&response);
+    http_response_t__free(&response);
 
     return SUCCESS;
 }

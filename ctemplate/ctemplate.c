@@ -135,7 +135,7 @@ struct template {
     const char *filename;  /* name of template file */
     const char *tmplstr;   /* contents of template file */
     FILE *out;             /* template output file pointer */
-    s_socket* socket;            /* socket descriptor to send to*/
+    socket_t* socket;            /* socket descriptor to send to*/
     FILE *errout;          /* error output file pointer */
     tagnode *roottag;      /* root of parse tree */
     const TMPL_fmtlist
