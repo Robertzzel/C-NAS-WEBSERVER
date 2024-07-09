@@ -10,8 +10,11 @@
 #include "../error.h"
 #include "stdlib.h"
 #include "string.h"
+#include "../file_utils/file_utils.h"
 
-error write_home_page_to_socket(socket_t* socket);
+#define HTML_TEMPLATES_DIRECTORY "/home/robert/CLionProjects/untitled/templates/"
+
+error get_login_page(char** page);
 error get_home_page(char** page);
 
 #endif //UNTITLED_HTML_FILES_H

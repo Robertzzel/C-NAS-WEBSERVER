@@ -13,7 +13,9 @@
 #include "../socket_t.h"
 #include "../utils.h"
 
-error write_zip_file(const char *zip_filename, list_strings_t* files);
-error write_zip_to_socket(list_strings_t* files, socket_t* socket);
+error read_file(const char *filename, char** file_content);
+error get_file_size(const char *filename, uint64_t* file_size);
+error check_path(const char* path);
+char* find_char_from_end(const char *str, char ch);
 
 #endif //UNTITLED_FILE_UTILS_H

@@ -23,6 +23,8 @@ add_executable(untitled main.c
         routes/routes.h
         file_utils/file_utils.c
         file_utils/file_utils.h
+        file_utils/zip.c
+        file_utils/zip.h
 )
 
 target_link_libraries(untitled OpenSSL::SSL OpenSSL::Crypto)

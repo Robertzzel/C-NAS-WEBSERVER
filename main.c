@@ -3,6 +3,7 @@
 #include "html/html_files.h"
 #include "routes/routes.h"
 #define BUFFER_SIZE 1024
+
 #include "stdio.h"
 error handle_client(http_request_t* request, socket_t* conn);
 
@@ -85,10 +86,14 @@ int main(int argc, char *argv[]) {
 }
 
 error handle_client(http_request_t* request, socket_t* conn) {
-    if(strcmp(request->uri, "/") == 0) {
+    if(strncmp(request->uri, STATIC_URL_PREFIX, strlen(STATIC_URL_PREFIX)) == 0){
+        return static_file_route(request, conn);
+    } else if(strcmp(request->uri, "/") == 0) {
         return handle_root_route(request, conn);
     } else if(strcmp(request->uri, "/download") == 0) {
         return handle_download_route(request, conn);
+    } else if(strcmp(request->uri, "/login") == 0) {
+        return handle_login_route(request, conn);
     }
 
     return handle_not_found_route(request, conn);

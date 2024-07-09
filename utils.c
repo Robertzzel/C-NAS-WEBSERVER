@@ -4,6 +4,7 @@
 
 #include "utils.h"
 
+
 error count_substring(const char *str, const char *substr, int* occurrences) {
     *occurrences = 0;
     char* substring = strstr(str, substr);
