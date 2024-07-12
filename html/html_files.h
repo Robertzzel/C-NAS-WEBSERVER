@@ -10,11 +10,11 @@
 #include "../error.h"
 #include "stdlib.h"
 #include "string.h"
-#include "../file_utils/file_utils.h"
+#include "../utils/file_utils.h"
 
 #define HTML_TEMPLATES_DIRECTORY "/home/robert/CLionProjects/untitled/templates/"
 
-error get_login_page(char** page);
-error get_home_page(char** page);
+char* get_login_page();
+char* get_home_page();
 
 #endif //UNTITLED_HTML_FILES_H

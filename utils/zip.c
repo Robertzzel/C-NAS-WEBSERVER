@@ -34,7 +34,7 @@ typedef struct {
     extra_field_t extra_field;
 } central_directory_header_t;
 
-error write_local_file_header(socket_t *socket, const char* filename, uint32_t crc32) {
+bool write_local_file_header(socket_t *socket, const char* filename, uint32_t crc32) {
     uint8_t local_file_header[LOCAL_FILE_HEADER_SIZE] = {0};
     *(uint32_t*)local_file_header = ZIP_LOCAL_FILE_HEADER_SIGNATURE;    // signature
     *(uint16_t*)(local_file_header + 4) = 20;                           // version needed
@@ -48,54 +48,54 @@ error write_local_file_header(socket_t *socket, const char* filename, uint32_t c
     *(uint16_t*)(local_file_header + 26) = strlen(filename);         // file name length
     *(uint16_t*)(local_file_header + 28) = 0;                           // extra field length
 
-    socket_t__write(socket, local_file_header, LOCAL_FILE_HEADER_SIZE, NULL);
-    socket_t__write(socket, filename, strlen(filename), NULL);
+    socket_t__write(socket, local_file_header, LOCAL_FILE_HEADER_SIZE);
+    socket_t__write(socket, filename, strlen(filename));
     FILE* f = fopen(filename, "rb");
     if(f == NULL){
-        return FAIL;
+        return false;
     }
 
     char buffer[READ_FILE_BUFFER_SIZE];
     size_t bytes_read;
     while((bytes_read = fread(buffer, 1, READ_FILE_BUFFER_SIZE, f)) > 0){
-        socket_t__write(socket, buffer, bytes_read, NULL);
+        socket_t__write(socket, buffer, bytes_read);
     }
 
     fclose(f);
-    return SUCCESS;
+    return true;
 }
 
 void write_central_directory_header(socket_t* socket, central_directory_header_t * header, char* filename) {
-    socket_t__write(socket, &header->signature, sizeof(header->signature), NULL);
-    socket_t__write(socket, &header->version_made_by, sizeof(header->version_made_by), NULL);
-    socket_t__write(socket, &header->version_needed, sizeof(header->version_needed), NULL);
-    socket_t__write(socket, &header->general_purpose_bit_flag, sizeof(header->general_purpose_bit_flag), NULL);
-    socket_t__write(socket, &header->compression_method, sizeof(header->compression_method), NULL);
-    socket_t__write(socket, &header->last_mod_file_time, sizeof(header->last_mod_file_time), NULL);
-    socket_t__write(socket, &header->last_mod_file_date, sizeof(header->last_mod_file_date), NULL);
-    socket_t__write(socket, &header->crc32, sizeof(header->crc32), NULL);
-    socket_t__write(socket, &header->compressed_size, sizeof(header->compressed_size), NULL);
-    socket_t__write(socket, &header->uncompressed_size, sizeof(header->uncompressed_size), NULL);
-    socket_t__write(socket, &header->file_name_length, sizeof(header->file_name_length), NULL);
-    socket_t__write(socket, &header->extra_field_length, sizeof(header->extra_field_length), NULL);
-    socket_t__write(socket, &header->file_comment_length, sizeof(header->file_comment_length), NULL);
-    socket_t__write(socket, &header->disk_number_start, sizeof(header->disk_number_start), NULL);
-    socket_t__write(socket, &header->internal_file_attributes, sizeof(header->internal_file_attributes), NULL);
-    socket_t__write(socket, &header->external_file_attributes, sizeof(header->external_file_attributes), NULL);
-    socket_t__write(socket, &header->relative_offset_of_local_header, sizeof(header->relative_offset_of_local_header),NULL);
+    socket_t__write(socket, &header->signature, sizeof(header->signature));
+    socket_t__write(socket, &header->version_made_by, sizeof(header->version_made_by));
+    socket_t__write(socket, &header->version_needed, sizeof(header->version_needed));
+    socket_t__write(socket, &header->general_purpose_bit_flag, sizeof(header->general_purpose_bit_flag));
+    socket_t__write(socket, &header->compression_method, sizeof(header->compression_method));
+    socket_t__write(socket, &header->last_mod_file_time, sizeof(header->last_mod_file_time));
+    socket_t__write(socket, &header->last_mod_file_date, sizeof(header->last_mod_file_date));
+    socket_t__write(socket, &header->crc32, sizeof(header->crc32));
+    socket_t__write(socket, &header->compressed_size, sizeof(header->compressed_size));
+    socket_t__write(socket, &header->uncompressed_size, sizeof(header->uncompressed_size));
+    socket_t__write(socket, &header->file_name_length, sizeof(header->file_name_length));
+    socket_t__write(socket, &header->extra_field_length, sizeof(header->extra_field_length));
+    socket_t__write(socket, &header->file_comment_length, sizeof(header->file_comment_length));
+    socket_t__write(socket, &header->disk_number_start, sizeof(header->disk_number_start));
+    socket_t__write(socket, &header->internal_file_attributes, sizeof(header->internal_file_attributes));
+    socket_t__write(socket, &header->external_file_attributes, sizeof(header->external_file_attributes));
+    socket_t__write(socket, &header->relative_offset_of_local_header, sizeof(header->relative_offset_of_local_header));
 
-    socket_t__write(socket, filename, header->file_name_length, NULL);
+    socket_t__write(socket, filename, header->file_name_length);
 
-    socket_t__write(socket, &header->extra_field.signature, sizeof(header->extra_field.signature), NULL);
-    socket_t__write(socket, &header->extra_field.size_extra_field, sizeof(header->extra_field.size_extra_field), NULL);
-    socket_t__write(socket, &header->extra_field.uncompressed_size, sizeof(header->extra_field.uncompressed_size), NULL);
-    socket_t__write(socket, &header->extra_field.compressed_size, sizeof(header->extra_field.compressed_size), NULL);
+    socket_t__write(socket, &header->extra_field.signature, sizeof(header->extra_field.signature));
+    socket_t__write(socket, &header->extra_field.size_extra_field, sizeof(header->extra_field.size_extra_field));
+    socket_t__write(socket, &header->extra_field.uncompressed_size, sizeof(header->extra_field.uncompressed_size));
+    socket_t__write(socket, &header->extra_field.compressed_size, sizeof(header->extra_field.compressed_size));
 }
 
-error m_crc32(const char *filename, uint32_t *crc32) {
+uint32_t m_crc32(const char *filename) {
     FILE *file = fopen(filename, "rb");
     if (!file) {
-        return FAIL;
+        return 0xe320bbde;
     }
     uint32_t crc = 0xe320bbde;
     rewind(file);
@@ -119,36 +119,28 @@ error m_crc32(const char *filename, uint32_t *crc32) {
     }
 
     fclose(file);
-    *crc32 = crc ^ 0xe320bbde;
-    return SUCCESS;
+    crc = crc ^ 0xe320bbde;
+    return crc;
 }
 
-error write_zip_to_socket(list_strings_t* file_paths, socket_t* socket) {
-    central_directory_header_t *central_directory_headers = calloc(file_paths->size, sizeof(central_directory_header_t));
-    if (central_directory_headers == NULL) {
-        return FAIL;
-    }
+bool write_zip_to_socket(list_string_t* file_paths, socket_t* socket) {
+    central_directory_header_t *central_directory_headers = xmalloc(sizeof(central_directory_header_t) * file_paths->size);
+    memset(central_directory_headers, 0, sizeof(central_directory_header_t) * file_paths->size);
 
     uint64_t central_directory_offset = 0;
     uint64_t central_directory_size = 0;
     for (int i = 0; i < file_paths->size; i++) {
-        char *filename;
-        error err = list_strings_t__get(file_paths, i, &filename);
-        if (err != SUCCESS) {
-            return err;
+        char *filename = list_strings_t__get(file_paths, i);
+        if (filename == NULL) {
+            return false;
         }
 
-        uint64_t file_size;
-        err = get_file_size(filename, &file_size);
-        if (err != SUCCESS) {
-            return err;
+        uint64_t file_size = get_file_size(filename);
+        if (file_size == -1) {
+            continue;
         }
 
-        uint32_t crc = 0;
-        err = m_crc32(filename, &crc);
-        if (err != SUCCESS) {
-            return err;
-        }
+        uint32_t crc = m_crc32(filename);
 
         write_local_file_header(socket, filename, crc);
 
@@ -180,10 +172,9 @@ error write_zip_to_socket(list_strings_t* file_paths, socket_t* socket) {
     }
 
     for (int i = 0; i < file_paths->size; i++) {
-        char *filename;
-        error err = list_strings_t__get(file_paths, i, &filename);
-        if (err != SUCCESS) {
-            return err;
+        char* filename = list_strings_t__get(file_paths, i);
+        if (filename == NULL) {
+            return false;
         }
 
         write_central_directory_header(socket, &central_directory_headers[i], filename);
@@ -201,7 +192,7 @@ error write_zip_to_socket(list_strings_t* file_paths, socket_t* socket) {
     *(uint64_t *) (buffer + 32) = file_paths->size; // number_of_central_directories
     *(uint64_t *) (buffer + 40) = central_directory_size; // size_of_cental_directory
     *(uint64_t *) (buffer + 48) = central_directory_offset; // offset_of_start_of_central_directory
-    socket_t__write(socket, buffer, ZIP_END_OF_CENTRAL_DIRECTORY, NULL);
+    socket_t__write(socket, buffer, ZIP_END_OF_CENTRAL_DIRECTORY);
 
     char zip_locator_buffer[ZIP_LOCATOR_SIZE];
     *(uint32_t *) (zip_locator_buffer) = ZIP_LOCATOR_SIGNATURE; // signature
@@ -210,7 +201,7 @@ error write_zip_to_socket(list_strings_t* file_paths, socket_t* socket) {
     *(uint64_t *) (zip_locator_buffer + 8) = central_directory_offset +
                                              central_directory_size; // relative offset of the zip64 end of central directory record
     *(uint32_t *) (zip_locator_buffer + 16) = 1; // total number of disks
-    socket_t__write(socket, zip_locator_buffer, ZIP_LOCATOR_SIZE, NULL);
+    socket_t__write(socket, zip_locator_buffer, ZIP_LOCATOR_SIZE);
 
     char end_of_record_buffer[ZIP_DIRECTORY_END_SIZE];
     *(uint32_t *) (end_of_record_buffer) = 101010256; // directoryEndSignature
@@ -221,7 +212,7 @@ error write_zip_to_socket(list_strings_t* file_paths, socket_t* socket) {
     *(uint32_t *) (end_of_record_buffer + 12) = 0xFFFFFFFF; // size of directory
     *(uint32_t *) (end_of_record_buffer + 16) = 0xFFFFFFFF; // start of directory
     *(uint16_t *) (end_of_record_buffer + 20) = 0; // byte size of eocd command
-    socket_t__write(socket, end_of_record_buffer, ZIP_DIRECTORY_END_SIZE, NULL);
+    socket_t__write(socket, end_of_record_buffer, ZIP_DIRECTORY_END_SIZE);
 
-    return SUCCESS;
+    return true;
 }

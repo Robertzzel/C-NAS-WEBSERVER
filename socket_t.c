@@ -2,42 +2,45 @@
 // Created by robert on 6/15/24.
 //
 #include "socket_t.h"
+#include "utils/utils.h"
 
 in_addr_t socket_resolve_hostname(const char *hostname);
 int get_address(const char* host, int port, struct sockaddr_in* addr);
 
-error socket_t__new(socket_t* s_socket, domain domain, type type, struct ssl_ctx_st *ssl_context){
-    if(s_socket == NULL || ssl_context == NULL) {
-        return FAIL;
+socket_t* socket_t__new(domain domain, type type, struct ssl_ctx_st *ssl_context){
+    if(ssl_context == NULL) {
+        return NULL;
     }
 
+    int socketfd = socket(domain, type, 0);
+    if(socketfd == -1) {
+        return NULL;
+    }
+
+    socket_t *s_socket = xmalloc(sizeof(socket_t ));
     s_socket->ssl_socket = NULL;
     s_socket->ssl_context = ssl_context;
-
-    s_socket->socketfd = socket(domain, type, 0);
-    if(s_socket->socketfd == -1) {
-        return FAIL;
-    }
+    s_socket->socketfd = socketfd;
 
     setsockopt(s_socket->socketfd, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int));
 
-    return SUCCESS;
+    return s_socket;
 }
 
-error socket_t__connect(socket_t* s_socket, const char* host, int port){
+bool socket_t__connect(socket_t* s_socket, const char* host, int port){
     if(s_socket == NULL || host == NULL) {
-        return FAIL;
+        return false;
     }
 
     struct sockaddr_in addr;
     int err = get_address(host, port, &addr);
     if(err != 0){
-        return FAIL;
+        return false;
     }
 
     err = connect(s_socket->socketfd, (struct sockaddr *)&addr, sizeof(addr));
     if (err < 0) {
-        return FAIL;
+        return false;
     }
 
     s_socket->ssl_socket = SSL_new(s_socket->ssl_context);
@@ -46,14 +49,14 @@ error socket_t__connect(socket_t* s_socket, const char* host, int port){
     err = SSL_connect(s_socket->ssl_socket);
     if (err <= 0) {
         ERR_print_errors_fp(stderr);
-        return FAIL;
+        return false;
     }
-    return SUCCESS;
+    return true;
 }
 
-error socket_t__bind(socket_t* m_socket, const char* host, int port){
+bool socket_t__bind(socket_t* m_socket, const char* host, int port){
     if(m_socket == NULL || host == NULL) {
-        return FAIL;
+        return false;
     }
 
     struct sockaddr_in addr;
@@ -63,77 +66,62 @@ error socket_t__bind(socket_t* m_socket, const char* host, int port){
     }
 
     if (bind(m_socket->socketfd, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-        return FAIL;
+        return false;
     }
 
-    return SUCCESS;
+    return true;
 }
 
-error socket_t__listen(socket_t* m_socket, int n){
-    if(m_socket == NULL) {
-        return FAIL;
-    }
+bool socket_t__listen(socket_t* m_socket, int n){
     if(listen(m_socket->socketfd, n) == -1){
-        return FAIL;
+        return false;
     }
-    return SUCCESS;
+    return true;
 }
 
-error socket_t__accept(socket_t* listening_socket, socket_t* new_socket){
-    if(listening_socket == NULL || new_socket == NULL){
-        return FAIL;
+socket_t* socket_t__accept(socket_t* listening_socket){
+    if(listening_socket == NULL){
+        return NULL;
     }
-
-    new_socket->ssl_socket = NULL;
-    new_socket->ssl_context = NULL;
 
     socklen_t socket_address_length;
     struct sockaddr_in client_addr;
-    new_socket->socketfd = accept(listening_socket->socketfd, (struct sockaddr*)&client_addr, &socket_address_length);
-    new_socket->ssl_socket = SSL_new(listening_socket->ssl_context);
-    SSL_set_fd(new_socket->ssl_socket, new_socket->socketfd);
+    int socketfd = accept(listening_socket->socketfd, (struct sockaddr*)&client_addr, &socket_address_length);
+    struct ssl_st* ssl_socket = SSL_new(listening_socket->ssl_context);
+    SSL_set_fd(ssl_socket, socketfd);
 
-
-    if (SSL_accept(new_socket->ssl_socket) <= 0) {
+    if (SSL_accept(ssl_socket) <= 0) {
+        SSL_free(ssl_socket);
         ERR_print_errors_fp(stderr);
-        return FAIL;
+        return NULL;
     }
 
-    return SUCCESS;
+    socket_t *new_socket = xmalloc(sizeof(socket_t));
+    new_socket->socketfd = socketfd;
+    new_socket->ssl_socket = ssl_socket;
+
+    return new_socket;
 }
 
-error socket_t__write(socket_t* s_socket, void* buffer, unsigned long buffer_size, unsigned long* bytes_written){
+int socket_t__write(socket_t* s_socket, const void* buffer, unsigned long buffer_size){
     if(s_socket == NULL || buffer == NULL){
-        return FAIL;
+        return -1;
     }
 
-    int err = SSL_write(s_socket->ssl_socket, buffer, buffer_size);
-    if(err > 0 && bytes_written != NULL){
-        *bytes_written = err;
-    } else if(err <= 0) {
-        return FAIL;
-    }
-    return SUCCESS;
+    return SSL_write(s_socket->ssl_socket, buffer, buffer_size);
 }
 
-error socket_t__read(socket_t* s_socket, void* buffer, unsigned long buffer_size, unsigned long* bytes_read){
+int socket_t__read(socket_t* s_socket, const void* buffer, unsigned long buffer_size){
     if(s_socket == NULL || buffer == NULL){
-        return FAIL;
+        return -1;
     }
 
-    int err = SSL_read(s_socket->ssl_socket, buffer, buffer_size);
-    if(err > 0 && bytes_read != NULL){
-        *bytes_read = err;
-    } else if(err <= 0) {
-        return FAIL;
-    }
-
-    return SUCCESS;
+    return SSL_read(s_socket->ssl_socket, buffer, buffer_size);
 }
 
-error socket_t__close(socket_t* m_socket){
+void socket_t__close(socket_t* m_socket){
     if(m_socket == NULL) {
-        return FAIL;
+        return;
     }
 
     if(m_socket->ssl_socket != NULL){
@@ -143,7 +131,6 @@ error socket_t__close(socket_t* m_socket){
     }
 
     close(m_socket->socketfd);
-    return SUCCESS;
 }
 
 int get_address(const char* host, int port, struct sockaddr_in* addr) {
@@ -183,7 +170,7 @@ in_addr_t socket_resolve_hostname(const char *hostname) {
     return addr;
 }
 
-error socket_t__create_context(SSL_CTX** context, const char* certificate_file, const char* private_key_file, int for_server)
+SSL_CTX* socket_t__create_context(const char* certificate_file, const char* private_key_file, int for_server)
 {
     const SSL_METHOD *method;
 
@@ -192,21 +179,22 @@ error socket_t__create_context(SSL_CTX** context, const char* certificate_file, 
     }else{
         method = TLS_client_method();
     }
-    *context = SSL_CTX_new(method);
-    if (!*context) {
-        return FAIL;
+
+    SSL_CTX* context = SSL_CTX_new(method);
+    if (!context) {
+        return NULL;
     }
 
-    int err = SSL_CTX_use_certificate_file(*context, certificate_file, SSL_FILETYPE_PEM);
+    int err = SSL_CTX_use_certificate_file(context, certificate_file, SSL_FILETYPE_PEM);
     if (err <= 0) {
         //ERR_print_errors_fp(stderr);
-        return FAIL;
+        return NULL;
     }
 
-    err = SSL_CTX_use_PrivateKey_file(*context, private_key_file, SSL_FILETYPE_PEM);
+    err = SSL_CTX_use_PrivateKey_file(context, private_key_file, SSL_FILETYPE_PEM);
     if (err <= 0 ) {
-        return FAIL;
+        return NULL;
     }
 
-    return SUCCESS;
+    return context;
 }

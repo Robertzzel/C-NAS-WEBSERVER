@@ -11,56 +11,52 @@
 
 #define READ_FILE_BUFFER (1024 * 16)
 
-error get_file_size(const char *filename, uint64_t* file_size) {
+int64_t get_file_size(const char *filename) {
     FILE *file = fopen(filename, "rb");
     if (file == NULL) {
-        return FAIL;
+        return -1;
     }
 
     if (fseek(file, 0, SEEK_END) != 0) {
-        return FAIL;
+        return -1;
     }
 
-    uint64_t fileSize = ftell(file);
+    int64_t fileSize = ftell(file);
     if (fileSize == -1) {
-        return FAIL;
+        return -1;
     }
-
-    *file_size = fileSize;
 
     fclose(file);
-    return SUCCESS;
+    return fileSize;
 }
 
-error read_file(const char *filename, char** file_content) {
-    uint64_t file_size = 0;
-    error err = get_file_size(filename, &file_size);
-    if(err != SUCCESS){
-        return err;
-    }
-
-    *file_content = calloc(sizeof(char), file_size + 1);
-    if(*file_content == NULL){
-        return FAIL;
+char* read_file(const char *filename) {
+    int64_t file_size = get_file_size(filename);
+    if(file_size == 0){
+        return NULL;
     }
 
     FILE* f = fopen(filename, "r");
     if(f == NULL){
-        return FAIL;
+        return NULL;
     }
+
+    char* file_content = xmalloc(sizeof(char) * (file_size + 1));
+    memset(file_content, 0, sizeof(char) * (file_size + 1));
 
     char buffer[READ_FILE_BUFFER] = {0};
     size_t bytes_read = 0;
     while((bytes_read = fread(buffer, 1, READ_FILE_BUFFER, f)) > 0){
-        strcat(*file_content, buffer);
+        buffer[bytes_read] = 0;
+        strcat(file_content, buffer);
     }
 
     fclose(f);
-    return SUCCESS;
+    return file_content;
 }
 
-error check_path(const char* path) {
-    return strstr(path, "..") == NULL ? SUCCESS : FAIL;
+bool check_path(const char* path) {
+    return strstr(path, "..") == NULL;
 }
 
 char* find_char_from_end(const char *str, char ch) {

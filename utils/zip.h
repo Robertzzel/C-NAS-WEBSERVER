@@ -6,9 +6,9 @@
 #define UNTITLED_ZIP_H
 
 #include "../socket_t.h"
-#include "../utils.h"
+#include "utils.h"
 #include "../error.h"
-
+#include "stdbool.h"
 /*
  ZIP FILE STRUCTURE:
     LOCAL_FILE_HEADER1
@@ -38,6 +38,6 @@
 #define READ_FILE_BUFFER_SIZE (1024 * 8)
 
 
-error write_zip_to_socket(list_strings_t* file_paths, socket_t* socket);
+bool write_zip_to_socket(list_string_t* file_paths, socket_t* socket);
 
 #endif //UNTITLED_ZIP_H

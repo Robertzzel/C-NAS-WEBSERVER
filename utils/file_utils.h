@@ -11,11 +11,11 @@
 #include "stdint.h"
 #include "zip.h"
 #include "../socket_t.h"
-#include "../utils.h"
+#include "utils.h"
 
-error read_file(const char *filename, char** file_content);
-error get_file_size(const char *filename, uint64_t* file_size);
-error check_path(const char* path);
+char* read_file(const char *filename);
+int64_t get_file_size(const char *filename);
+bool check_path(const char* path);
 char* find_char_from_end(const char *str, char ch);
 
 #endif //UNTITLED_FILE_UTILS_H
