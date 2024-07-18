@@ -54,16 +54,8 @@ bool static_file_route(http_request_t *request, socket_t *conn) {
         return false;
     }
     http_response_t__set_status(response, 200);
-    success = http_response_t__add_header(response, "Connection", "close");
-    if(!success) {
-        http_response_t__free(response);
-        return false;
-    }
-    success = http_response_t__add_header(response, "Content-Type", content_type);
-    if(!success) {
-        http_response_t__free(response);
-        return false;
-    }
+    http_response_t__add_header(response, "Connection", "close");
+    http_response_t__add_header(response, "Content-Type", content_type);
 
     char* response_string = http_response_t__to_bytes(response);
     if(response_string == NULL) {

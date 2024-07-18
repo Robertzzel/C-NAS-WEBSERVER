@@ -23,6 +23,7 @@ add_executable(untitled main.c
         utils/file_utils.h
         utils/zip.c
         utils/zip.h
+        utils/file.h
         routes/login.c
         routes/root.c
         routes/not_found.c
@@ -30,6 +31,10 @@ add_executable(untitled main.c
         routes/download.c
         users/users.c
         users/users.h
+        routes/home.c
+        utils/file.c
+        utils/string_t.h
+        utils/string_t.c
 )
 add_compile_options(-Wall)
 target_link_libraries(untitled OpenSSL::SSL OpenSSL::Crypto)

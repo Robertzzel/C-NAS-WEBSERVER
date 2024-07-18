@@ -5,6 +5,7 @@
 #define BUFFER_SIZE 2048
 
 #include "stdio.h"
+
 bool handle_client(http_request_t* request, socket_t* conn);
 
 int main(int argc, char *argv[]) {
@@ -53,10 +54,10 @@ int main(int argc, char *argv[]) {
         socket_t* client = socket_t__accept(s);
         if(client == NULL){
             printf("Cannot accept sockt\n");
-            break;
+            continue;
         }
 
-        unsigned long read = socket_t__read(client, buffer, BUFFER_SIZE);
+        int read = socket_t__read(client, buffer, BUFFER_SIZE);
         if(read < 0){
             printf("Cannot read socket\n");
             break;
@@ -65,11 +66,10 @@ int main(int argc, char *argv[]) {
 
         http_request_t* request = http_request_t__from_bytes(buffer);
         if(request == NULL) {
-            break;
+            continue;
         }
 
         handle_client(request, client);
-
         socket_t__close(client);
         http_request_t__free(request);
     }
@@ -83,13 +83,34 @@ int main(int argc, char *argv[]) {
 bool handle_client(http_request_t* request, socket_t* conn) {
     if(strncmp(request->uri, STATIC_URL_PREFIX, strlen(STATIC_URL_PREFIX)) == 0){
         return static_file_route(request, conn);
-    } else if(strcmp(request->uri, "/") == 0) {
-        return handle_root_route(request, conn);
-    } else if(strcmp(request->uri, "/download") == 0) {
-        return handle_download_route(request, conn);
-    } else if(strcmp(request->uri, "/login") == 0) {
-        return handle_login_route(request, conn);
     }
 
-    return handle_not_found_route(request, conn);
+    if(strcmp(request->uri, "/") == 0) {
+        if(strcmp(request->method, "GET") == 0) {
+            return handle_root_route_get(request, conn);
+        }
+    }
+
+    if(strcmp(request->uri, "/download") == 0) {
+        if(strcmp(request->method, "POST") == 0) {
+            return handle_download_route_post(request, conn);
+        }
+    }
+
+    if(strcmp(request->uri, "/login") == 0) {
+        if(strcmp(request->method, "GET") == 0) {
+            return handle_login_route_get(request, conn);
+        }
+        if(strcmp(request->method, "POST") == 0) {
+            return handle_login_route_post(request, conn);
+        }
+    }
+
+    if(strncmp(request->uri, "/home/", strlen("/home/")) == 0) {
+        if(strcmp(request->method, "GET") == 0) {
+            return handle_home_route_get(request, conn);
+        }
+    }
+
+    return handle_not_found_route_get(request, conn);
 }

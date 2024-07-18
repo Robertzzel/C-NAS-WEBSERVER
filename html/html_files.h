@@ -9,12 +9,12 @@
 #include "../ctemplate/ctemplate.h"
 #include "../error.h"
 #include "stdlib.h"
-#include "string.h"
 #include "../utils/file_utils.h"
+#include "../utils/file.h"
 
 #define HTML_TEMPLATES_DIRECTORY "/home/robert/CLionProjects/untitled/templates/"
 
 char* get_login_page();
-char* get_home_page();
+char* get_home_page(list_file_t* files);
 
 #endif //UNTITLED_HTML_FILES_H

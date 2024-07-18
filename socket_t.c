@@ -108,15 +108,15 @@ int socket_t__write(socket_t* s_socket, const void* buffer, unsigned long buffer
         return -1;
     }
 
-    return SSL_write(s_socket->ssl_socket, buffer, buffer_size);
+    return SSL_write(s_socket->ssl_socket, buffer, (int)buffer_size);
 }
 
-int socket_t__read(socket_t* s_socket, const void* buffer, unsigned long buffer_size){
+int socket_t__read(socket_t* s_socket, void* buffer, unsigned long buffer_size){
     if(s_socket == NULL || buffer == NULL){
         return -1;
     }
 
-    return SSL_read(s_socket->ssl_socket, buffer, buffer_size);
+    return SSL_read(s_socket->ssl_socket, buffer, (int)buffer_size);
 }
 
 void socket_t__close(socket_t* m_socket){

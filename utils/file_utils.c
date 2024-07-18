@@ -2,14 +2,20 @@
 // Created by robert on 7/5/24.
 //
 
-#include <string.h>
 #include "file_utils.h"
 #include "../error.h"
+#include "file.h"
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
 
 #define READ_FILE_BUFFER (1024 * 16)
+
+
+list_string_t* get_files_from_directory() {
+    return NULL;
+}
+
 
 int64_t get_file_size(const char *filename) {
     FILE *file = fopen(filename, "rb");

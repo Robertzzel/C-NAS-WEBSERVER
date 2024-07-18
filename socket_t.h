@@ -9,14 +9,12 @@
 #include <openssl/err.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include "stdbool.h"
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <netdb.h>
@@ -43,7 +41,7 @@ bool socket_t__bind(socket_t* m_socket, const char* host, int port);
 bool socket_t__listen(socket_t* m_socket, int n);
 socket_t* socket_t__accept(socket_t* listening_socket);
 int socket_t__write(socket_t* s_socket, const void* buffer, unsigned long buffer_size);
-int socket_t__read(socket_t* s_socket, const void* buffer, unsigned long buffer_size);
+int socket_t__read(socket_t* s_socket, void* buffer, unsigned long buffer_size);
 void socket_t__close(socket_t* m_socket);
 
 #endif //UNTITLED_SOCKET_T_H

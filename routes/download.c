@@ -4,7 +4,7 @@
 #include "routes.h"
 
 
-bool handle_download_route(http_request_t* request, socket_t* conn) {
+bool handle_download_route_post(http_request_t* request, socket_t* conn) {
     http_response_t* response = http_response_t__new();
     http_response_t__set_status(response, 200);
     http_response_t__add_header(response, "Connection", "close");
@@ -18,18 +18,18 @@ bool handle_download_route(http_request_t* request, socket_t* conn) {
 
     socket_t__write(conn, string, strlen(string) - 2);
 
-    list_string_t* files = list_strings_t__new();
+    list_string_t* files = list_strings__new(3);
 
     //char name1[] = "/home/robert/Downloads/kali-linux-2024.1-virtualbox-amd64.7z";
     char name2[] = "/home/robert/Downloads/Sisteme de Prelucrare Grafica.rar";
     //list_strings_t__add(&files, name1, strlen(name1));
-    list_strings_t__add(files, name2, strlen(name2));
+    list_strings__add(files, name2);
     bool success = write_zip_to_socket(files, conn);
     if(!success){
         return false;
     }
 
-    list_strings_t__free(files);
+    list_strings__free(files);
     free(string);
     http_response_t__free(response);
 

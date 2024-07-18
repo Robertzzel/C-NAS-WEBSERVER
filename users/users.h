@@ -6,7 +6,6 @@
 #define UNTITLED_USERS_H
 #include "../error.h"
 #include <stdio.h>
-#include "string.h"
 #include "openssl/sha.h"
 #include "stdbool.h"
 #define USERS_FILE "../users.txt"

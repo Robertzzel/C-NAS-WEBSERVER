@@ -8,7 +8,6 @@
 #include "stddef.h"
 #include "../error.h"
 #include "stdlib.h"
-#include "string.h"
 #include "stdio.h"
 #include "../utils/utils.h"
 #include "../socket_t.h"
@@ -26,7 +25,7 @@ void http_response_t__free(http_response_t* response);
 void http_response_t__set_version(http_response_t* response, char* version);
 bool http_response_t__set_status(http_response_t* response, int status);
 void http_response_t__set_body(http_response_t* response, char* body);
-bool http_response_t__add_header(http_response_t* response, char* name, char* value);
+void http_response_t__add_header(http_response_t* response, char* name, char* value);
 char* http_response_t__to_bytes(http_response_t* response);
 
 

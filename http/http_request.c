@@ -4,51 +4,31 @@
 
 #include "http_request.h"
 
-char* http_request_t__get_method(const char *request_line);
-char* http_request_t__get_uri(const char *request_line);
-char* http_request_t__get_version(const char *request_line);
-list_string_t* http_request_t__parse_header(const char *header_line);
-http_request_t* http_request_t__new();
+list_string_t* http_request_t__get_method_uri_version(char* request_line);
+list_string_t* http_request_t__parse_header(char* header_line);
 
 http_request_t* http_request_t__from_bytes(char* message) {
-    http_request_t* request = http_request_t__new();
-    if(request == NULL) {
+    list_string_t *parts = string__split(message, HTTP_MESSAGE_DELIMITER);
+
+    char* request_line = list_strings__get(parts, 0);
+    list_string_t* request_line_parts = string__split(request_line, " ");
+    if(request_line_parts == NULL || request_line_parts->size != 3){
         return NULL;
     }
 
-    list_string_t *parts = string_split(message, HTTP_MESSAGE_DELIMITER);
-    if(parts == NULL){
-        return NULL;
-    }
+    http_request_t* request = xmalloc(sizeof(http_request_t));
+    request->method = string__copy(list_strings__get(request_line_parts, 0));
+    request->uri = string__copy(list_strings__get(request_line_parts, 1));
+    request->version = string__copy(list_strings__get(request_line_parts, 2));
+    list_strings__free(request_line_parts);
 
-    char *request_line = list_strings_t__get(parts, 0);
-    if(request_line == NULL){
-        return NULL;
-    }
-
-    request->method = http_request_t__get_method(request_line);
-    if(request->method == NULL){
-        return NULL;
-    }
-    request->uri = http_request_t__get_uri(request_line);
-    if(request->uri == NULL){
-        return NULL;
-    }
-    request->version = http_request_t__get_version(request_line);
-    if(request->method == NULL){
-        return NULL;
-    }
-
+    request->header_names = list_strings__new(parts->size - 2);
+    request->headers_values = list_strings__new(parts->size - 2);
     int i;
     for(i = 1; i < parts->size; ++i) {
-        char *header_line = list_strings_t__get(parts, i);
-        if(header_line == NULL){
-            http_request_t__free(request);
-            list_strings_t__free(parts);
-            return NULL;
-        }
+        char* header_line = list_strings__get(parts, i);
 
-        if(strcmp(header_line, "") == 0) {
+        if(string__is_empty(header_line)) {
             break;
         }
 
@@ -57,103 +37,47 @@ http_request_t* http_request_t__from_bytes(char* message) {
             break;
         }
 
-        char* key = list_strings_t__get(key_value_pair, 0);
-        char* value = list_strings_t__get(key_value_pair, 1);
-        list_strings_t__add(request->header_names, key, strlen(key));
-        list_strings_t__add(request->headers_values, value, strlen(value));
+        char* key = list_strings__get(key_value_pair, 0);
+        char* value = list_strings__get(key_value_pair, 1);
+        list_strings__add(request->header_names, key);
+        list_strings__add(request->headers_values, value);
 
-        list_strings_t__free(key_value_pair);
+        list_strings__free(key_value_pair);
     }
 
-    char* last_part = list_strings_t__get(parts, i + 1);
-    if(last_part == NULL){
-        list_strings_t__free(parts);
-        return request;
-    }
-    request->body = xstrdup(last_part);
+    char* last_part = list_strings__get(parts, i + 1);
+    request->body = string__copy(last_part);
 
-    list_strings_t__free(parts);
+    list_strings__free(parts);
     return request;
 }
 
-list_string_t* http_request_t__parse_header(const char *header_line) {
+list_string_t* http_request_t__parse_header(char* header_line) {
     char* delimiter = strchr(header_line, ':');
     if(delimiter == NULL){
         return NULL;
     }
 
-    long key_size = delimiter - header_line;
-    unsigned long value_size = strlen(delimiter + 1);
-    if(key_size < 1 || value_size < 1){
+    unsigned long header_key_size = delimiter - header_line;
+    unsigned long header_value_size = strlen(delimiter + 1);
+    if(header_key_size < 1 || header_value_size < 1){
         return NULL;
     }
 
-    char* key = xstrndup(header_line, key_size);
-    char* value = xstrdup(delimiter + 1);
+    char* key = string__substring(header_line, 0, header_key_size);
+    char* value = string__copy(delimiter + 1);
 
-    char* clean_key = trim_whitespace(key);
-    char* clean_value = trim_whitespace(value);
+    char* clean_key = string__trim_whitespace(key);
+    char* clean_value = string__trim_whitespace(value);
     free(key);
     free(value);
 
-    list_string_t* result = list_strings_t__new();
-    list_strings_t__add(result, clean_key, strlen(clean_key));
-    list_strings_t__add(result, clean_value, strlen(clean_value));
+    list_string_t* result = list_strings__new(2);
+    list_strings__add(result, clean_key);
+    list_strings__add(result, clean_value);
     free(clean_value);
     free(clean_key);
     return result;
-}
-
-char* http_request_t__get_method(const char *request_line){
-    char* delimiter = strchr(request_line, ' ');
-    if(delimiter == NULL) {
-        return NULL;
-    }
-    long method_size = delimiter - request_line;
-    if(method_size < 1){
-        return NULL;
-    }
-
-    return xstrndup(request_line, method_size);
-}
-char* http_request_t__get_uri(const char *request_line){
-    char* method_end = strchr(request_line, ' ');
-    if(method_end == NULL) {
-        return NULL;
-    }
-    ++method_end;
-    char* uri_end = strchr(method_end, ' ');
-    if(uri_end == NULL) {
-        return NULL;
-    }
-    long uri_size = uri_end - method_end;
-    if(uri_size < 1){
-        return NULL;
-    }
-
-    return xstrndup(method_end, uri_size);
-}
-char* http_request_t__get_version(const char *request_line){
-    char* method_end = strchr(request_line, ' ');
-    if(method_end == NULL) {
-        return NULL;
-    }
-    ++method_end;
-    char* uri_end = strchr(method_end, ' ');
-    if(uri_end == NULL) {
-        return NULL;
-    }
-    char* version_start = ++uri_end;
-    char* version_end = strstr(version_start, "\r\n");
-    if(version_end == NULL) {
-        return NULL;
-    }
-    long version_size = version_end - version_start;
-    if(version_size < 1){
-        return NULL;
-    }
-
-    return xstrndup(version_start, version_size);
 }
 
 void http_request_t__free(http_request_t *request){
@@ -173,27 +97,33 @@ void http_request_t__free(http_request_t *request){
         free(request->body);
         request->body = NULL;
     }
-    list_strings_t__free(request->header_names);
-    list_strings_t__free(request->headers_values);
+    list_strings__free(request->header_names);
+    list_strings__free(request->headers_values);
     free(request);
 }
 
-http_request_t* http_request_t__new() {
-    http_request_t* request = xmalloc(sizeof(http_request_t));
-    request->method = NULL;
-    request->uri = NULL;
-    request->version = NULL;
-    request->header_names = list_strings_t__new();
-    if(request->header_names == NULL){
-        free(request);
+char* http_request_t___get_form_value(http_request_t* request, char* key) {
+    list_string_t* form_parts = string__split(request->body, "&");
+    if(form_parts->size < 1) {
+        free(form_parts);
         return NULL;
     }
-    request->headers_values = list_strings_t__new();
-    if(request->headers_values == NULL){
-        free(request);
-        return NULL;
-    }
-    request->body = NULL;
 
-    return request;
+    char* result = NULL;
+    for(int i = 0; i < form_parts->size; ++i){
+        char* part = list_strings__get(form_parts, i);
+        list_string_t* key_value_pair = string__split(part, "=");
+        if(key_value_pair->size < 2){
+            list_strings__free(key_value_pair);
+            continue;
+        }
+
+        char* form_part_key = list_strings__get(key_value_pair, 0);
+        if(strcmp(form_part_key, key) == 0) {
+            result = string__copy(list_strings__get(key_value_pair, 1));
+        }
+
+        list_strings__free(key_value_pair);
+    }
+    return result;
 }

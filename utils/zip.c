@@ -130,11 +130,7 @@ bool write_zip_to_socket(list_string_t* file_paths, socket_t* socket) {
     uint64_t central_directory_offset = 0;
     uint64_t central_directory_size = 0;
     for (int i = 0; i < file_paths->size; i++) {
-        char *filename = list_strings_t__get(file_paths, i);
-        if (filename == NULL) {
-            return false;
-        }
-
+        char *filename = list_strings__get(file_paths, i);
         uint64_t file_size = get_file_size(filename);
         if (file_size == -1) {
             continue;
@@ -172,10 +168,7 @@ bool write_zip_to_socket(list_string_t* file_paths, socket_t* socket) {
     }
 
     for (int i = 0; i < file_paths->size; i++) {
-        char* filename = list_strings_t__get(file_paths, i);
-        if (filename == NULL) {
-            return false;
-        }
+        char* filename = list_strings__get(file_paths, i);
 
         write_central_directory_header(socket, &central_directory_headers[i], filename);
     }
