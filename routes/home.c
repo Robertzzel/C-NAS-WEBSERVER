@@ -11,10 +11,10 @@ bool handle_home_route_get(http_request_t* request, socket_t* conn) {
     list_file_t* l = list_file_t__new();
     file_t f;
     f.name = "HEHE";
+    f.type = 'l';
     for(int i=0;i<15;i++){
         list_file_t__insert(l, &f);
     }
-
 
     http_response_t * response = http_response_t__new();
     http_response_t__set_status(response, 200);

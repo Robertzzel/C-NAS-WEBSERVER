@@ -2,6 +2,7 @@
 // Created by robert on 7/16/24.
 //
 
+#include <stdarg.h>
 #include "string_t.h"
 
 char* string__new(size_t length) {
@@ -77,6 +78,29 @@ char* string__trim_whitespace(char *this) {
 char* string__substring(char* this, uint32_t start_index, uint32_t end_index) {
     char* new_str = string__copy_n(this + start_index, end_index - start_index);
     return new_str;
+}
+
+char* string__concatenate_strings(int number_of_strings, ...) {
+    va_list args;
+    va_start(args, number_of_strings);
+
+    size_t total_length = 0;
+    for (int i = 0; i < number_of_strings; i++) {
+        char *str = va_arg(args, char*);
+        total_length += strlen(str);
+    }
+
+    char *result = xmalloc(total_length + 1);
+
+    va_start(args, number_of_strings);
+    result[0] = '\0'; // Initialize result with empty string
+    for (int i = 0; i < number_of_strings; i++) {
+        char *str = va_arg(args, char*);
+        strcat(result, str);
+    }
+
+    va_end(args);
+    return result;
 }
 
 list_string_t* list_strings__new(size_t initial_capacity){
@@ -165,7 +189,7 @@ char* list_strings__to_string(list_string_t* list) {
         total_length += strlen(list->array[i]);
     }
 
-    char* new_str = string__new(total_length);
+    char* new_str = string__new(total_length + 1);
     for(int i = 0; i < list->size; i++){
         strcat(new_str, list->array[i]);
     }

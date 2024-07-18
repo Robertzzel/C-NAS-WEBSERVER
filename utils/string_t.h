@@ -26,6 +26,7 @@ char* string__to_lower(char* str);
 int string__is_empty(char* this);
 char* string__trim_whitespace(char* this);
 char* string__substring(char* this, uint32_t start_index, uint32_t end_index);
+char* string__concatenate_strings(int number_of_strings, ...);
 
 list_string_t* list_strings__new(size_t initial_capacity);
 void list_strings__add(list_string_t* array, char* string);

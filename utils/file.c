@@ -18,7 +18,9 @@ void file_t__free(file_t* file) {
 
 void file_t__copy(file_t* file, file_t* another) {
     another->name = xstrdup(file->name);
+    another->type = file->type;
 }
+
 list_file_t* list_file_t__new() {
     list_file_t* list = xmalloc(sizeof(list_file_t));
     list->capacity = 5;
@@ -58,22 +60,8 @@ void list_file_t__free(list_file_t* list) {
 }
 
 char* list_file_t__to_json(file_t* file) {
-    // Convert the name field to JSON
-    size_t length = strlen(file->name);
-    char* json_name = (char*)malloc(length + 3); // 2 quotes + null terminator
-    sprintf(json_name, "\"%s\"", file->name);
-
-    // Calculate the total length of the final JSON string
-    size_t totalLength = strlen(json_name) + 10; // 10 is an arbitrary extra space for the JSON structure
-
-    // Allocate memory for the final JSON string
-    char* json = (char*)malloc(totalLength);
-
-    // Construct the final JSON string
-    sprintf(json, "{\"name\":%s}", json_name);
-
-    // Free the temporary JSON string
-    free(json_name);
-
-    return json;
+    char* type_string = string__copy_n(&file->type, 1);
+    char* result = string__concatenate_strings(6, "{\"name\":\"", file->name, "\",", "\"type\":\"", type_string, "\"}");
+    free(type_string);
+    return result;
 }

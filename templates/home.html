@@ -16,12 +16,12 @@
             height: 5vh;
         }
         .icon-size {
-            width: 7em;
-            height: 6.5em;
+            width: 14em;
+            height: 13em;
         }
         .file-menu-button {
-            width: 3em;
-            height: 3em;
+            width: 6em;
+            height: 6em;
             border: none;
             background-color: transparent;
             outline: none;
@@ -30,8 +30,8 @@
             border: none;
         }
         .file-menu-button-image-button-size {
-            width: 2em;
-            height: 2em;
+            width: 4em;
+            height: 4em;
         }
         .w-min{
             width: min-content;
@@ -53,24 +53,25 @@
     <script>
         let files = [`@files`];
         $(document).ready(() => {
-            files.forEach((file, index) => {
-                let name = file.name;
-                for (let i = 0; i< index; i++){
-                    name += file.name;
-                }
+            console.log(files);
+            updateFilesSlide()
+        })
+
+        function updateFilesSlide() {
+            files.forEach((file) => {
                 $('#files-slide').append(`
-                    <div class="d-flex flex-column w-min align-items-center col">
+                    <div class="d-flex flex-column w-min h-min align-items-center col">
                         <div class="d-flex flex-row">
                             <img src="/static/directory.png" class="icon-size" alt="hello">
                             <button type="submit" class="file-menu-button">
                                 <img src="/static/menu.png" class="file-menu-button-image-button-size">
                             </button>
                         </div>
-                        <p>${name}</p>
+                        <p>${file.name}</p>
                     </div>
                 `);
             })
-        })
+        }
     </script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
 </body>

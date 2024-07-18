@@ -8,6 +8,7 @@
 
 typedef struct {
     char* name;
+    char type;
 } file_t;
 
 file_t* file_t__new(char* name);
