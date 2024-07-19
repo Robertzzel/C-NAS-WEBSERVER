@@ -18,8 +18,18 @@ http_request_t* http_request_t__from_bytes(char* message) {
 
     http_request_t* request = xmalloc(sizeof(http_request_t));
     request->method = string__copy(list_strings__get(request_line_parts, 0));
-    request->uri = string__copy(list_strings__get(request_line_parts, 1));
+
+    char* uri = list_strings__get(request_line_parts, 1);
+    char* found_question_mark = strchr(uri, '?');
+    if(found_question_mark == NULL ){
+        request->uri = string__copy(uri);
+    } else {
+        request->uri = string__substring(uri, 0, found_question_mark - uri);
+    }
+    //request->uri = string__copy(list_strings__get(request_line_parts, 1));
+
     request->version = string__copy(list_strings__get(request_line_parts, 2));
+
     list_strings__free(request_line_parts);
 
     request->header_names = list_strings__new(parts->size - 2);

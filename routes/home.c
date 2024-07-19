@@ -1,4 +1,5 @@
 #include "routes.h"
+extern char* root_directory_path;
 
 bool handle_home_route_get(http_request_t* request, socket_t* conn) {
     char* path = xstrdup(request->uri + 6);
@@ -8,28 +9,30 @@ bool handle_home_route_get(http_request_t* request, socket_t* conn) {
         return false;
     }
 
-    list_file_t* l = list_file_t__new();
-    file_t f;
-    f.name = "HEHE";
-    f.type = 'l';
-    for(int i=0;i<15;i++){
-        list_file_t__insert(l, &f);
+    char* full_file_path = string__concatenate_strings(3, root_directory_path, "/", path);
+    free(path);
+
+    list_file_t* l = list_directory(full_file_path);
+    if(l == NULL){
+        return false;
     }
+    free(full_file_path);
 
     http_response_t * response = http_response_t__new();
     http_response_t__set_status(response, 200);
     http_response_t__add_header(response, "Content-Type", "text/html; charset=UTF-8");
     http_response_t__add_header(response, "Connection", "close");
     http_response_t__add_header(response, "Access-Control-Allow-Origin", "*");
+
     char* body = get_home_page(l);
+    list_file_t__free(l);
     http_response_t__set_body(response, body);
+    free(body);
+
     char* response_msg = http_response_t__to_bytes(response);
     socket_t__write(conn, response_msg, strlen(response_msg));
-
-    free(body);
     free(response_msg);
-    free(path);
-    list_file_t__free(l);
+
     return true;
 }
 

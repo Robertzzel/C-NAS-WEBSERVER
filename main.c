@@ -8,12 +8,15 @@
 
 bool handle_client(http_request_t* request, socket_t* conn);
 
+char* root_directory_path = NULL;
+
 int main(int argc, char *argv[]) {
-    if(argc != 5) {
-        printf("ex: ./binary server_host server_port certificate_file_path private_key_file_path");
+    if(argc != 6) {
+        printf("ex: ./binary server_host server_port certificate_file_path private_key_file_path root_file_directory");
         return 1;
     }
 
+    root_directory_path = argv[5];
     const char* server_host = argv[1];
 
     char* error_converting_port = NULL;
