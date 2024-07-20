@@ -2,9 +2,8 @@
 extern char* root_directory_path;
 
 bool handle_home_route_get(http_request_t* request, socket_t* conn) {
-    char* path = xstrdup(request->uri + 6);
-    bool valid_path = check_path(path);
-    if(!valid_path) {
+    char* path = string__copy(request->uri + 6);
+    if(!check_path(path)) {
         free(path);
         return false;
     }
@@ -18,18 +17,19 @@ bool handle_home_route_get(http_request_t* request, socket_t* conn) {
     }
     free(full_file_path);
 
-    http_response_t * response = http_response_t__new();
-    http_response_t__set_status(response, 200);
-    http_response_t__add_header(response, "Content-Type", "text/html; charset=UTF-8");
-    http_response_t__add_header(response, "Connection", "close");
-    http_response_t__add_header(response, "Access-Control-Allow-Origin", "*");
+    http_response_t response;
+    http_response_t__new(&response);
+    http_response_t__set_status(&response, 200);
+    http_response_t__add_header(&response, "Content-Type", "text/html; charset=UTF-8");
+    http_response_t__add_header(&response, "Connection", "close");
+    http_response_t__add_header(&response, "Access-Control-Allow-Origin", "*");
 
     char* body = get_home_page(l);
     list_file_t__free(l);
-    http_response_t__set_body(response, body);
+    http_response_t__set_body(&response, body);
     free(body);
 
-    char* response_msg = http_response_t__to_bytes(response);
+    char* response_msg = http_response_t__to_bytes(&response);
     socket_t__write(conn, response_msg, strlen(response_msg));
     free(response_msg);
 

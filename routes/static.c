@@ -49,17 +49,16 @@ bool static_file_route(http_request_t *request, socket_t *conn) {
     }
     free(full_file_path);
 
-    http_response_t* response = http_response_t__new();
-    if(response == NULL){
-        return false;
-    }
-    http_response_t__set_status(response, 200);
-    http_response_t__add_header(response, "Connection", "close");
-    http_response_t__add_header(response, "Content-Type", content_type);
+    http_response_t response;
+    http_response_t__new(&response);
 
-    char* response_string = http_response_t__to_bytes(response);
+    http_response_t__set_status(&response, 200);
+    http_response_t__add_header(&response, "Connection", "close");
+    http_response_t__add_header(&response, "Content-Type", content_type);
+
+    char* response_string = http_response_t__to_bytes(&response);
     if(response_string == NULL) {
-        http_response_t__free(response);
+        http_response_t__free(&response);
         return false;
     }
 
@@ -74,7 +73,7 @@ bool static_file_route(http_request_t *request, socket_t *conn) {
     socket_t__write(conn, "\r\n", 2);
 
     free(response_string);
-    http_response_t__free(response);
+    http_response_t__free(&response);
     fclose(f);
 
     return true;

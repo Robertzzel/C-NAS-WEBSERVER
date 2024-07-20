@@ -43,7 +43,7 @@
         <div class="vh-5 d-flex justify-content-center">
             <input id="filter-input" type="text" class="vw-80">
         </div>
-        <div id="files-slide" class="vh-85 overflow-auto row">
+        <div id="files-slide" class="vh-85 overflow-auto row pt-3 pb-3">
 
         </div>
         <div class="vh-5 bg-warning">
@@ -52,23 +52,29 @@
     </div>
     <script>
         let files = [`@files`];
-        $(document).ready(() => {
-            console.log(files);
-            updateFilesSlide()
-        })
-
-        $("#filter-input").on("input", () => {
-            updateFilesSlide()
-        })
+        $(document).ready(() => { updateFilesSlide() })
+        $("#filter-input").on("input", () => { updateFilesSlide()})
 
         function updateFilesSlide() {
-            $('#files-slide').html("");
-            var input_value = $("#filter-input").val().toLowerCase();
+            let current_path = document.URL.split("?")[0].split("/").slice(4).join("/");
+            let parent_file_path = current_path.split("/").slice(0, -1).join("/");
+
+            $('#files-slide').html(`
+                    <div class="d-flex flex-column w-min h-min align-items-center col">
+                        <form class="d-flex flex-row" method="get" action="/home/${parent_file_path}">
+                            <input type="image" src="/static/back.png" class="icon-size" alt="hello">
+                        </form>
+                        <p>..</p>
+                    </div>
+                `);
+
+            let input_value = $("#filter-input").val().toLowerCase();
             files.filter((file) => file.name.toLowerCase().includes(input_value)).forEach((file) => {
+                let file_path = current_path !== "" ? `${current_path}/${file.name}` : file.name
                 $('#files-slide').append(`
                     <div class="d-flex flex-column w-min h-min align-items-center col">
                         <div class="d-flex flex-row">
-                        <form method="get" action="/${file.type === "d"?"home":"download"}/${file.name}">
+                        <form method="get" action="/${file.type === "d"?"home":"download"}/${file_path}">
                             <input type="image" src="/static/${file.type === "d"?"directory":"file"}.png" class="icon-size" alt="hello">
                         </form>
                         <button type="submit" class="file-menu-button">

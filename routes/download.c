@@ -5,14 +5,15 @@
 
 
 bool handle_download_route_post(http_request_t* request, socket_t* conn) {
-    http_response_t* response = http_response_t__new();
-    http_response_t__set_status(response, 200);
-    http_response_t__add_header(response, "Connection", "close");
-    http_response_t__add_header(response, "Content-Type", "application/octet-stream");
-    http_response_t__add_header(response, "Content-Disposition", "attachment; filename=\"hello\"");
-    char* string = http_response_t__to_bytes(response);
+    http_response_t response;
+    http_response_t__new(&response);
+    http_response_t__set_status(&response, 200);
+    http_response_t__add_header(&response, "Connection", "close");
+    http_response_t__add_header(&response, "Content-Type", "application/octet-stream");
+    http_response_t__add_header(&response, "Content-Disposition", "attachment; filename=\"hello\"");
+    char* string = http_response_t__to_bytes(&response);
     if(string == NULL) {
-        http_response_t__free(response);
+        http_response_t__free(&response);
         return false;
     }
 
@@ -31,7 +32,7 @@ bool handle_download_route_post(http_request_t* request, socket_t* conn) {
 
     list_strings__free(files);
     free(string);
-    http_response_t__free(response);
+    http_response_t__free(&response);
 
     return true;
 }

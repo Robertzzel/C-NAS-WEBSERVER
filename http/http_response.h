@@ -20,7 +20,7 @@ typedef struct {
     char* body;
 } http_response_t;
 
-http_response_t* http_response_t__new();
+void http_response_t__new(http_response_t*);
 void http_response_t__free(http_response_t* response);
 void http_response_t__set_version(http_response_t* response, char* version);
 bool http_response_t__set_status(http_response_t* response, int status);

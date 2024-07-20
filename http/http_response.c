@@ -4,14 +4,12 @@
 
 #include "http_response.h"
 
-http_response_t* http_response_t__new(){
-    http_response_t* response = xmalloc(sizeof(http_response_t));
+void http_response_t__new(http_response_t* response){
     response->body = NULL;
     response->version = string__copy("HTTP/1.1");
     response->header_names = list_strings__new(3);
     response->header_values = list_strings__new(3);
     response->status = 0;
-    return response;
 }
 
 void http_response_t__free(http_response_t* response){
@@ -23,7 +21,6 @@ void http_response_t__free(http_response_t* response){
     }
     list_strings__free(response->header_names);
     list_strings__free(response->header_values);
-    free(response);
 }
 
 void http_response_t__set_version(http_response_t* response, char* version){

@@ -94,18 +94,22 @@ bool handle_client(http_request_t* request, socket_t* conn) {
         }
     }
 
-    if(strcmp(request->uri, "/download") == 0) {
-        if(strcmp(request->method, "POST") == 0) {
-            return handle_download_route_post(request, conn);
-        }
-    }
-
     if(strcmp(request->uri, "/login") == 0) {
         if(strcmp(request->method, "GET") == 0) {
             return handle_login_route_get(request, conn);
         }
         if(strcmp(request->method, "POST") == 0) {
             return handle_login_route_post(request, conn);
+        }
+    }
+
+    // LOGIN REQUIRED TO CONTINUE
+
+
+
+    if(strcmp(request->uri, "/download") == 0) {
+        if(strcmp(request->method, "POST") == 0) {
+            return handle_download_route_post(request, conn);
         }
     }
 
