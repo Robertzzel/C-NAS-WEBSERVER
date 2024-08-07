@@ -62,15 +62,15 @@ bool static_file_route(http_request_t *request, socket_t *conn) {
         return false;
     }
 
-    socket_t__write(conn, response_string, strlen(response_string) - 2);
+    socket__write(conn, response_string, strlen(response_string) - 2);
 
     char buffer[1024];
     size_t bytes_read;
     while((bytes_read = fread(buffer, 1, 1024, f)) > 0){
-        socket_t__write(conn, buffer, bytes_read);
+        socket__write(conn, buffer, bytes_read);
     }
 
-    socket_t__write(conn, "\r\n", 2);
+    socket__write(conn, "\r\n", 2);
 
     free(response_string);
     http_response_t__free(&response);

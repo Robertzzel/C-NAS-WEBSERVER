@@ -5,7 +5,7 @@
 #ifndef UNTITLED_ZIP_H
 #define UNTITLED_ZIP_H
 
-#include "../socket_t.h"
+#include "../IO/socket_t.h"
 #include "utils.h"
 #include "../error.h"
 #include "stdbool.h"

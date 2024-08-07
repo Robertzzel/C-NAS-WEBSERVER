@@ -6,7 +6,7 @@
 
 void http_response_t__new(http_response_t* response){
     response->body = NULL;
-    response->version = string__copy("HTTP/1.1");
+    response->version = string__from("HTTP/1.1", strlen("HTTP/1.1"));
     response->header_names = list_strings__new(3);
     response->header_values = list_strings__new(3);
     response->status = 0;
@@ -27,7 +27,7 @@ void http_response_t__set_version(http_response_t* response, char* version){
     if(version != NULL) {
         free(response->version);
     }
-    response->version = string__copy(version);
+    response->version = string__from(version, strlen(version));
 }
 
 bool http_response_t__set_status(http_response_t* response, int status){
@@ -42,7 +42,7 @@ void http_response_t__set_body(http_response_t* response, char* body){
     if(response->body != NULL) {
         free(response->body);
     }
-    response->body = string__copy(body);
+    response->body = string__from(body, strlen(body));
 }
 
 void http_response_t__add_header(http_response_t* response, char* name, char* value) {

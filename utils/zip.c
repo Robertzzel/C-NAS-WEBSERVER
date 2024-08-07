@@ -48,8 +48,8 @@ bool write_local_file_header(socket_t *socket, const char* filename, uint32_t cr
     *(uint16_t*)(local_file_header + 26) = strlen(filename);         // file name length
     *(uint16_t*)(local_file_header + 28) = 0;                           // extra field length
 
-    socket_t__write(socket, local_file_header, LOCAL_FILE_HEADER_SIZE);
-    socket_t__write(socket, filename, strlen(filename));
+    socket__write(socket, local_file_header, LOCAL_FILE_HEADER_SIZE);
+    socket__write(socket, filename, strlen(filename));
     FILE* f = fopen(filename, "rb");
     if(f == NULL){
         return false;
@@ -58,7 +58,7 @@ bool write_local_file_header(socket_t *socket, const char* filename, uint32_t cr
     char buffer[READ_FILE_BUFFER_SIZE];
     size_t bytes_read;
     while((bytes_read = fread(buffer, 1, READ_FILE_BUFFER_SIZE, f)) > 0){
-        socket_t__write(socket, buffer, bytes_read);
+        socket__write(socket, buffer, bytes_read);
     }
 
     fclose(f);
@@ -66,30 +66,30 @@ bool write_local_file_header(socket_t *socket, const char* filename, uint32_t cr
 }
 
 void write_central_directory_header(socket_t* socket, central_directory_header_t * header, char* filename) {
-    socket_t__write(socket, &header->signature, sizeof(header->signature));
-    socket_t__write(socket, &header->version_made_by, sizeof(header->version_made_by));
-    socket_t__write(socket, &header->version_needed, sizeof(header->version_needed));
-    socket_t__write(socket, &header->general_purpose_bit_flag, sizeof(header->general_purpose_bit_flag));
-    socket_t__write(socket, &header->compression_method, sizeof(header->compression_method));
-    socket_t__write(socket, &header->last_mod_file_time, sizeof(header->last_mod_file_time));
-    socket_t__write(socket, &header->last_mod_file_date, sizeof(header->last_mod_file_date));
-    socket_t__write(socket, &header->crc32, sizeof(header->crc32));
-    socket_t__write(socket, &header->compressed_size, sizeof(header->compressed_size));
-    socket_t__write(socket, &header->uncompressed_size, sizeof(header->uncompressed_size));
-    socket_t__write(socket, &header->file_name_length, sizeof(header->file_name_length));
-    socket_t__write(socket, &header->extra_field_length, sizeof(header->extra_field_length));
-    socket_t__write(socket, &header->file_comment_length, sizeof(header->file_comment_length));
-    socket_t__write(socket, &header->disk_number_start, sizeof(header->disk_number_start));
-    socket_t__write(socket, &header->internal_file_attributes, sizeof(header->internal_file_attributes));
-    socket_t__write(socket, &header->external_file_attributes, sizeof(header->external_file_attributes));
-    socket_t__write(socket, &header->relative_offset_of_local_header, sizeof(header->relative_offset_of_local_header));
+    socket__write(socket, &header->signature, sizeof(header->signature));
+    socket__write(socket, &header->version_made_by, sizeof(header->version_made_by));
+    socket__write(socket, &header->version_needed, sizeof(header->version_needed));
+    socket__write(socket, &header->general_purpose_bit_flag, sizeof(header->general_purpose_bit_flag));
+    socket__write(socket, &header->compression_method, sizeof(header->compression_method));
+    socket__write(socket, &header->last_mod_file_time, sizeof(header->last_mod_file_time));
+    socket__write(socket, &header->last_mod_file_date, sizeof(header->last_mod_file_date));
+    socket__write(socket, &header->crc32, sizeof(header->crc32));
+    socket__write(socket, &header->compressed_size, sizeof(header->compressed_size));
+    socket__write(socket, &header->uncompressed_size, sizeof(header->uncompressed_size));
+    socket__write(socket, &header->file_name_length, sizeof(header->file_name_length));
+    socket__write(socket, &header->extra_field_length, sizeof(header->extra_field_length));
+    socket__write(socket, &header->file_comment_length, sizeof(header->file_comment_length));
+    socket__write(socket, &header->disk_number_start, sizeof(header->disk_number_start));
+    socket__write(socket, &header->internal_file_attributes, sizeof(header->internal_file_attributes));
+    socket__write(socket, &header->external_file_attributes, sizeof(header->external_file_attributes));
+    socket__write(socket, &header->relative_offset_of_local_header, sizeof(header->relative_offset_of_local_header));
 
-    socket_t__write(socket, filename, header->file_name_length);
+    socket__write(socket, filename, header->file_name_length);
 
-    socket_t__write(socket, &header->extra_field.signature, sizeof(header->extra_field.signature));
-    socket_t__write(socket, &header->extra_field.size_extra_field, sizeof(header->extra_field.size_extra_field));
-    socket_t__write(socket, &header->extra_field.uncompressed_size, sizeof(header->extra_field.uncompressed_size));
-    socket_t__write(socket, &header->extra_field.compressed_size, sizeof(header->extra_field.compressed_size));
+    socket__write(socket, &header->extra_field.signature, sizeof(header->extra_field.signature));
+    socket__write(socket, &header->extra_field.size_extra_field, sizeof(header->extra_field.size_extra_field));
+    socket__write(socket, &header->extra_field.uncompressed_size, sizeof(header->extra_field.uncompressed_size));
+    socket__write(socket, &header->extra_field.compressed_size, sizeof(header->extra_field.compressed_size));
 }
 
 uint32_t m_crc32(const char *filename) {
@@ -185,7 +185,7 @@ bool write_zip_to_socket(list_string_t* file_paths, socket_t* socket) {
     *(uint64_t *) (buffer + 32) = file_paths->size; // number_of_central_directories
     *(uint64_t *) (buffer + 40) = central_directory_size; // size_of_cental_directory
     *(uint64_t *) (buffer + 48) = central_directory_offset; // offset_of_start_of_central_directory
-    socket_t__write(socket, buffer, ZIP_END_OF_CENTRAL_DIRECTORY);
+    socket__write(socket, buffer, ZIP_END_OF_CENTRAL_DIRECTORY);
 
     char zip_locator_buffer[ZIP_LOCATOR_SIZE];
     *(uint32_t *) (zip_locator_buffer) = ZIP_LOCATOR_SIGNATURE; // signature
@@ -194,7 +194,7 @@ bool write_zip_to_socket(list_string_t* file_paths, socket_t* socket) {
     *(uint64_t *) (zip_locator_buffer + 8) = central_directory_offset +
                                              central_directory_size; // relative offset of the zip64 end of central directory record
     *(uint32_t *) (zip_locator_buffer + 16) = 1; // total number of disks
-    socket_t__write(socket, zip_locator_buffer, ZIP_LOCATOR_SIZE);
+    socket__write(socket, zip_locator_buffer, ZIP_LOCATOR_SIZE);
 
     char end_of_record_buffer[ZIP_DIRECTORY_END_SIZE];
     *(uint32_t *) (end_of_record_buffer) = 101010256; // directoryEndSignature
@@ -205,7 +205,7 @@ bool write_zip_to_socket(list_string_t* file_paths, socket_t* socket) {
     *(uint32_t *) (end_of_record_buffer + 12) = 0xFFFFFFFF; // size of directory
     *(uint32_t *) (end_of_record_buffer + 16) = 0xFFFFFFFF; // start of directory
     *(uint16_t *) (end_of_record_buffer + 20) = 0; // byte size of eocd command
-    socket_t__write(socket, end_of_record_buffer, ZIP_DIRECTORY_END_SIZE);
+    socket__write(socket, end_of_record_buffer, ZIP_DIRECTORY_END_SIZE);
 
     return true;
 }

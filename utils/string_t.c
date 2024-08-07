@@ -12,28 +12,17 @@ char* string__new(size_t length) {
     return new_str;
 }
 
-char* string__copy_n(char* str, size_t length) {
+char* string__from(char* str, size_t length) {
     char* result = xmalloc(sizeof(char) * (length + 1));
     strncpy(result, str, length);
     result[length] = 0;
     return result;
 }
 
-char* string__copy(char* str) {
-    return string__copy_n(str, strlen(str));
-}
-
-char* string__append(char* first, char* second) {
-    char* result = xmalloc(sizeof(char) * (strlen(first) + strlen(second) + 1));
-    strcpy(result, first);
-    strcat(result, second);
-    return result;
-}
-
-char* string__append_n(char* first, char* second, size_t length) {
+char* string__append(char* first, char* second, size_t length) {
     char* result = xmalloc(sizeof(char) * (strlen(first) + length + 1));
     strcpy(result, first);
-    strncat(result, second, length);
+    strcat(result, second);
     return result;
 }
 
@@ -70,13 +59,13 @@ char* string__trim_whitespace(char *this) {
     while (*str == ' ') str++;
     while (end != str && *end == ' ') end--;
 
-    char* new_str = string__copy_n(str, end - str);
+    char* new_str = string__from(str, end - str);
 
     return new_str;
 }
 
 char* string__substring(char* this, uint32_t start_index, uint32_t end_index) {
-    char* new_str = string__copy_n(this + start_index, end_index - start_index);
+    char* new_str = string__from(this + start_index, end_index - start_index);
     return new_str;
 }
 
@@ -103,6 +92,7 @@ char* string__concatenate_strings(int number_of_strings, ...) {
     return result;
 }
 
+
 list_string_t* list_strings__new(size_t initial_capacity){
     list_string_t* array = xmalloc(sizeof(list_string_t));
     array->cap = initial_capacity;
@@ -118,7 +108,7 @@ void list_strings__add(list_string_t* array, char* string) {
         array->array = xrealloc(array->array, sizeof(char*) * array->cap);
     }
 
-    char* string_copy = string__copy(string);
+    char* string_copy = string__from(string, strlen(string));
     array->array[array->size] = string_copy;
     ++array->size;
 }
@@ -129,7 +119,7 @@ void list_strings__add_n(list_string_t* array, char* string, size_t length) {
         array->array = xrealloc(array->array, sizeof(char*) * array->cap);
     }
 
-    char* new_string = string__copy_n(string, length);
+    char* new_string = string__from(string, length);
     array->array[array->size] = new_string;
     ++array->size;
 }
@@ -141,7 +131,7 @@ void list_strings__replace(list_string_t* array, int index, char* new_string) {
     }
 
     free(array->array[index]);
-    char* string_copy = string__copy(new_string);
+    char* string_copy = string__from(new_string, strlen(new_string));
     array->array[index] = string_copy;
 }
 
@@ -183,15 +173,18 @@ void list_strings__free(list_string_t* array){
     free(array);
 }
 
-char* list_strings__to_string(list_string_t* list) {
+char* string__join(list_string_t* list, char* delim) {
     size_t total_length = 0;
-    for(int i = 0; i < list->size; i++){
+    for (int i = 0; i < list->size; i++) {
         total_length += strlen(list->array[i]);
     }
 
-    char* new_str = string__new(total_length + 1);
-    for(int i = 0; i < list->size; i++){
+    char *new_str = string__new(total_length + (strlen(delim) * (list->size - 1)));
+    for (int i = 0; i < list->size; i++) {
         strcat(new_str, list->array[i]);
+        if (i != list->size-1) {
+            strcat(new_str, delim);
+        }
     }
 
     return new_str;

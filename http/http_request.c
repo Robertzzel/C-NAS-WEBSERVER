@@ -4,7 +4,6 @@
 
 #include "http_request.h"
 
-list_string_t* http_request_t__get_method_uri_version(char* request_line);
 list_string_t* http_request_t__parse_header(char* header_line);
 
 http_request_t* http_request_t__from_bytes(char* message) {
@@ -17,18 +16,20 @@ http_request_t* http_request_t__from_bytes(char* message) {
     }
 
     http_request_t* request = xmalloc(sizeof(http_request_t));
-    request->method = string__copy(list_strings__get(request_line_parts, 0));
+    char* method = list_strings__get(request_line_parts, 0);
+    request->method = string__from(method, strlen(method));
 
     char* uri = list_strings__get(request_line_parts, 1);
     char* found_question_mark = strchr(uri, '?');
     if(found_question_mark == NULL ){
-        request->uri = string__copy(uri);
+        request->uri = string__from(uri, strlen(uri));
     } else {
         request->uri = string__substring(uri, 0, found_question_mark - uri);
     }
     //request->uri = string__copy(list_strings__get(request_line_parts, 1));
 
-    request->version = string__copy(list_strings__get(request_line_parts, 2));
+    char* version = list_strings__get(request_line_parts, 2);
+    request->version = string__from(version, strlen(version));
 
     list_strings__free(request_line_parts);
 
@@ -56,7 +57,7 @@ http_request_t* http_request_t__from_bytes(char* message) {
     }
 
     char* last_part = list_strings__get(parts, i + 1);
-    request->body = string__copy(last_part);
+    request->body = string__from(last_part, strlen(last_part));
 
     list_strings__free(parts);
     return request;
@@ -75,7 +76,7 @@ list_string_t* http_request_t__parse_header(char* header_line) {
     }
 
     char* key = string__substring(header_line, 0, header_key_size);
-    char* value = string__copy(delimiter + 1);
+    char* value = string__from(delimiter + 1, strlen(delimiter) + 1);
 
     char* clean_key = string__trim_whitespace(key);
     char* clean_value = string__trim_whitespace(value);
@@ -130,7 +131,8 @@ char* http_request_t___get_form_value(http_request_t* request, char* key) {
 
         char* form_part_key = list_strings__get(key_value_pair, 0);
         if(strcmp(form_part_key, key) == 0) {
-            result = string__copy(list_strings__get(key_value_pair, 1));
+            char* r = list_strings__get(key_value_pair, 1);
+            result = string__from(r, strlen(r));
         }
 
         list_strings__free(key_value_pair);

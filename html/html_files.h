@@ -6,7 +6,6 @@
 #define UNTITLED_HTML_FILES_H
 
 #include "stdio.h"
-#include "../ctemplate/ctemplate.h"
 #include "../error.h"
 #include "stdlib.h"
 #include "../utils/file_utils.h"

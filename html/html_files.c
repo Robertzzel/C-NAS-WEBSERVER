@@ -16,8 +16,8 @@ char* get_home_page(list_file_t* files) {
     for (int i = 0; i < files->size; ++i) {
         file_t* file = list_file_t__get(files, i);
         char* file_json = list_file_t__to_json(file);
-        char* file_json_with_ending_comma = string__append(file_json, ",");
-        tag_replacement = string__append(tag_replacement, file_json_with_ending_comma);
+        char* file_json_with_ending_comma = string__append(file_json, ",", 1);
+        tag_replacement = string__append(tag_replacement, file_json_with_ending_comma, strlen(file_json_with_ending_comma));
         free(file_json);
         free(file_json_with_ending_comma);
     }

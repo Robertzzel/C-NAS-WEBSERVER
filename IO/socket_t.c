@@ -2,12 +2,12 @@
 // Created by robert on 6/15/24.
 //
 #include "socket_t.h"
-#include "utils/utils.h"
+#include "../utils/utils.h"
 
 in_addr_t socket_resolve_hostname(const char *hostname);
 int get_address(const char* host, int port, struct sockaddr_in* addr);
 
-socket_t* socket_t__new(domain domain, type type, struct ssl_ctx_st *ssl_context){
+socket_t* socket__new(domain domain, type type, struct ssl_ctx_st *ssl_context){
     if(ssl_context == NULL) {
         return NULL;
     }
@@ -27,20 +27,20 @@ socket_t* socket_t__new(domain domain, type type, struct ssl_ctx_st *ssl_context
     return s_socket;
 }
 
-bool socket_t__connect(socket_t* s_socket, const char* host, int port){
+int socket__connect(socket_t* s_socket, const char* host, int port){
     if(s_socket == NULL || host == NULL) {
-        return false;
+        return 1;
     }
 
     struct sockaddr_in addr;
     int err = get_address(host, port, &addr);
     if(err != 0){
-        return false;
+        return 1;
     }
 
     err = connect(s_socket->socketfd, (struct sockaddr *)&addr, sizeof(addr));
     if (err < 0) {
-        return false;
+        return 1;
     }
 
     s_socket->ssl_socket = SSL_new(s_socket->ssl_context);
@@ -49,14 +49,15 @@ bool socket_t__connect(socket_t* s_socket, const char* host, int port){
     err = SSL_connect(s_socket->ssl_socket);
     if (err <= 0) {
         ERR_print_errors_fp(stderr);
-        return false;
+        return 1;
     }
-    return true;
+
+    return 0;
 }
 
-bool socket_t__bind(socket_t* m_socket, const char* host, int port){
+int socket__bind(socket_t* m_socket, const char* host, int port){
     if(m_socket == NULL || host == NULL) {
-        return false;
+        return 1;
     }
 
     struct sockaddr_in addr;
@@ -66,20 +67,20 @@ bool socket_t__bind(socket_t* m_socket, const char* host, int port){
     }
 
     if (bind(m_socket->socketfd, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-        return false;
+        return 1;
     }
 
-    return true;
+    return 0;
 }
 
-bool socket_t__listen(socket_t* m_socket, int n){
+int socket__listen(socket_t* m_socket, int n){
     if(listen(m_socket->socketfd, n) == -1){
-        return false;
+        return 1;
     }
-    return true;
+    return 0;
 }
 
-socket_t* socket_t__accept(socket_t* listening_socket){
+socket_t* socket__accept(socket_t* listening_socket){
     if(listening_socket == NULL){
         return NULL;
     }
@@ -103,7 +104,7 @@ socket_t* socket_t__accept(socket_t* listening_socket){
     return new_socket;
 }
 
-int socket_t__write(socket_t* s_socket, const void* buffer, unsigned long buffer_size){
+int socket__write(socket_t* s_socket, const void* buffer, unsigned long buffer_size){
     if(s_socket == NULL || buffer == NULL){
         return -1;
     }
@@ -111,7 +112,7 @@ int socket_t__write(socket_t* s_socket, const void* buffer, unsigned long buffer
     return SSL_write(s_socket->ssl_socket, buffer, (int)buffer_size);
 }
 
-int socket_t__read(socket_t* s_socket, void* buffer, unsigned long buffer_size){
+int socket__read(socket_t* s_socket, void* buffer, unsigned long buffer_size){
     if(s_socket == NULL || buffer == NULL){
         return -1;
     }
@@ -119,7 +120,7 @@ int socket_t__read(socket_t* s_socket, void* buffer, unsigned long buffer_size){
     return SSL_read(s_socket->ssl_socket, buffer, (int)buffer_size);
 }
 
-void socket_t__close(socket_t* m_socket){
+void socket__close(socket_t* m_socket){
     if(m_socket == NULL) {
         return;
     }
@@ -170,7 +171,7 @@ in_addr_t socket_resolve_hostname(const char *hostname) {
     return addr;
 }
 
-SSL_CTX* socket_t__create_context(const char* certificate_file, const char* private_key_file, int for_server)
+SSL_CTX* socket__create_context(const char* certificate_file, const char* private_key_file, int for_server)
 {
     const SSL_METHOD *method;
 

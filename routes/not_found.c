@@ -11,7 +11,7 @@ bool handle_not_found_route_get(http_request_t* request, socket_t* conn) {
     http_response_t__add_header(&response, "Connection", "close");
     char* string = http_response_t__to_bytes(&response);
 
-    socket_t__write(conn, string, strlen(string));
+    socket__write(conn, string, strlen(string));
     free(string);
     http_response_t__free(&response);
     return true;

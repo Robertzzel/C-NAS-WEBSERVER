@@ -2,7 +2,7 @@
 extern char* root_directory_path;
 
 bool handle_home_route_get(http_request_t* request, socket_t* conn) {
-    char* path = string__copy(request->uri + 6);
+    char* path = string__from(request->uri + 6, strlen(request->uri + 6));
     if(!check_path(path)) {
         free(path);
         return false;
@@ -30,7 +30,7 @@ bool handle_home_route_get(http_request_t* request, socket_t* conn) {
     free(body);
 
     char* response_msg = http_response_t__to_bytes(&response);
-    socket_t__write(conn, response_msg, strlen(response_msg));
+    socket__write(conn, response_msg, strlen(response_msg));
     free(response_msg);
 
     return true;

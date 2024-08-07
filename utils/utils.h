@@ -7,9 +7,7 @@
 
 #include "string_t.h"
 #include "stdlib.h"
-#include "../error.h"
 #include "stdio.h"
-#include "stdbool.h"
 #include <ctype.h>
 
 void* xmalloc(size_t bytes);

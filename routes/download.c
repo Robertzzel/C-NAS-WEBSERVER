@@ -17,7 +17,7 @@ bool handle_download_route_post(http_request_t* request, socket_t* conn) {
         return false;
     }
 
-    socket_t__write(conn, string, strlen(string) - 2);
+    socket__write(conn, string, strlen(string) - 2);
 
     list_string_t* files = list_strings__new(3);
 
