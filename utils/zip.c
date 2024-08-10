@@ -190,9 +190,9 @@ bool write_zip_to_socket(list_string_t* file_paths, socket_t* socket) {
     char zip_locator_buffer[ZIP_LOCATOR_SIZE];
     *(uint32_t *) (zip_locator_buffer) = ZIP_LOCATOR_SIGNATURE; // signature
     *(uint32_t *) (zip_locator_buffer +
-                   4) = 0; // number of the disk with the start of the zip64 end of central directory
+                   4) = 0; // number of the disk with the read of the zip64 write of central directory
     *(uint64_t *) (zip_locator_buffer + 8) = central_directory_offset +
-                                             central_directory_size; // relative offset of the zip64 end of central directory record
+                                             central_directory_size; // relative offset of the zip64 write of central directory record
     *(uint32_t *) (zip_locator_buffer + 16) = 1; // total number of disks
     socket__write(socket, zip_locator_buffer, ZIP_LOCATOR_SIZE);
 
@@ -203,7 +203,7 @@ bool write_zip_to_socket(list_string_t* file_paths, socket_t* socket) {
     *(uint16_t *) (end_of_record_buffer + 8) = 0xFFFF; // number of entries this disk
     *(uint16_t *) (end_of_record_buffer + 10) = 0xFFFF; // number of entries total
     *(uint32_t *) (end_of_record_buffer + 12) = 0xFFFFFFFF; // size of directory
-    *(uint32_t *) (end_of_record_buffer + 16) = 0xFFFFFFFF; // start of directory
+    *(uint32_t *) (end_of_record_buffer + 16) = 0xFFFFFFFF; // read of directory
     *(uint16_t *) (end_of_record_buffer + 20) = 0; // byte size of eocd command
     socket__write(socket, end_of_record_buffer, ZIP_DIRECTORY_END_SIZE);
 

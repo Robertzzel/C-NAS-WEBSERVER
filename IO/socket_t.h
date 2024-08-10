@@ -43,6 +43,7 @@ int socket__listen(socket_t* m_socket, int n);
 socket_t* socket__accept(socket_t* listening_socket);
 int socket__write(socket_t* s_socket, const void* buffer, unsigned long buffer_size);
 int socket__read(socket_t* s_socket, void* buffer, unsigned long buffer_size);
+int socket__read_timeout(socket_t* s_socket, void* buffer, unsigned long buffer_size);
 void socket__close(socket_t* m_socket);
 
 #endif //UNTITLED_SOCKET_T_H

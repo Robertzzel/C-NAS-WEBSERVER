@@ -8,7 +8,7 @@
 
 
 
-bool handle_login_route_get(http_request_t* request, socket_t* conn) {
+bool handle_login_route_get(request_t* request, socket_t* conn) {
     http_response_t response;
     http_response_t__new(&response);
     http_response_t__set_status(&response, 200);
@@ -26,7 +26,7 @@ bool handle_login_route_get(http_request_t* request, socket_t* conn) {
     return true;
 }
 
-bool handle_login_route_post(http_request_t* request, socket_t* conn) {
+bool handle_login_route_post(request_t* request, socket_t* conn) {
     char *username= http_request_t___get_form_value(request, LOGIN_USERNAME_LABEL);
     if(username == NULL){
         return false;

@@ -1,6 +1,7 @@
 //
 // Created by robert on 6/15/24.
 //
+#include <fcntl.h>
 #include "socket_t.h"
 #include "../utils/utils.h"
 
@@ -57,27 +58,27 @@ int socket__connect(socket_t* s_socket, const char* host, int port){
 
 int socket__bind(socket_t* m_socket, const char* host, int port){
     if(m_socket == NULL || host == NULL) {
-        return 1;
+        return 0;
     }
 
     struct sockaddr_in addr;
     int err = get_address(host, port, &addr);
     if(err != 0){
-        return err;
+        return 0;
     }
 
     if (bind(m_socket->socketfd, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-        return 1;
+        return 0;
     }
 
-    return 0;
+    return 1;
 }
 
 int socket__listen(socket_t* m_socket, int n){
     if(listen(m_socket->socketfd, n) == -1){
-        return 1;
+        return 0;
     }
-    return 0;
+    return 1;
 }
 
 socket_t* socket__accept(socket_t* listening_socket){
@@ -97,6 +98,11 @@ socket_t* socket__accept(socket_t* listening_socket){
         return NULL;
     }
 
+    int flags = fcntl(socketfd, F_GETFL, 0);
+    if (flags >= 0){
+        fcntl(socketfd, F_SETFL, flags | O_NONBLOCK);
+    }
+
     socket_t *new_socket = xmalloc(sizeof(socket_t));
     new_socket->socketfd = socketfd;
     new_socket->ssl_socket = ssl_socket;
@@ -110,6 +116,25 @@ int socket__write(socket_t* s_socket, const void* buffer, unsigned long buffer_s
     }
 
     return SSL_write(s_socket->ssl_socket, buffer, (int)buffer_size);
+}
+
+int socket__read_timeout(socket_t* s_socket, void* buffer, unsigned long buffer_size){
+    if(s_socket == NULL || buffer == NULL){
+        return -1;
+    }
+
+    struct timeval timeout;
+    timeout.tv_usec = 0;
+    timeout.tv_sec = 1;
+    fd_set readfds;
+    FD_ZERO(&readfds);
+    FD_SET(s_socket->socketfd, &readfds);
+
+    int res = select(s_socket->socketfd + 1, &readfds, NULL, NULL, &timeout);
+    if (res <= 0) {
+        return -1;
+    }
+    return SSL_read(s_socket->ssl_socket, buffer, (int)buffer_size);
 }
 
 int socket__read(socket_t* s_socket, void* buffer, unsigned long buffer_size){

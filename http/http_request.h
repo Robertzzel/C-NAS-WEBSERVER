@@ -8,18 +8,18 @@
 #include "stdlib.h"
 #include "../error.h"
 #include "../utils/utils.h"
-#define HTTP_MESSAGE_DELIMITER "\r\n"
+#include "../IO/buffered_reader.h"
 
 typedef struct {
-    char* method;
-    char* uri;
-    char* version;
-    list_string_t* header_names;
-    list_string_t* headers_values;
-    char* body;
-} http_request_t;
+    LIST(char)* method;
+    LIST(char)* uri;
+    LIST(char)* version;
+    LIST(list_char)* header_names;
+    LIST(list_char)* headers_values;
+    LIST(char)* body;
+} request_t;
 
-http_request_t* http_request_t__from_bytes(char* message);
-void http_request_t__free(http_request_t *request);
-char* http_request_t___get_form_value(http_request_t* request, char* key);
+request_t* request_from_bytes(buffered_socket_t* reader);
+void http_request_t__free(request_t *request);
+char* http_request_t___get_form_value(request_t* request, char* key);
 #endif //UNTITLED_HTTP_REQUEST_H

@@ -5,8 +5,9 @@
 #define BUFFER_SIZE 2048
 
 #include "stdio.h"
-
-int handle_client(http_request_t* request, socket_t* conn);
+#include "IO/buffered_reader.h"
+#include "functional_utils/vector.h"
+int handle_client(request_t* request, socket_t* conn);
 
 char* root_directory_path = NULL;
 
@@ -50,7 +51,6 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    char buffer[BUFFER_SIZE];
     while(1) {
         socket_t* client = socket__accept(s);
         if(client == NULL){
@@ -58,18 +58,27 @@ int main(int argc, char *argv[]) {
             continue;
         }
 
-        int read = socket__read(client, buffer, BUFFER_SIZE);
-        if(read < 0){
+        buffered_socket_t* reader = buffered_socket_new(client);
+
+        vector_t* v = buffered_socket_read(reader, 100);
+        if(v == NULL){
             printf("Cannot read socket\n");
             break;
         }
-        buffer[read] = 0;
+        vector_free(v);
 
-        http_request_t* request = http_request_t__from_bytes(buffer);
+        v = buffered_socket_read_until_or_max(reader, '\n', 100);
+        if(v == NULL){
+            printf("Cannot read socket\n");
+            break;
+        }
+
+        request_t* request = request_from_bytes(reader);
         if(request == NULL) {
             continue;
         }
 
+        vector_free(v);
         handle_client(request, client);
         socket__close(client);
         http_request_t__free(request);
@@ -81,7 +90,7 @@ int main(int argc, char *argv[]) {
     return 0;
 }
 
-int handle_client(http_request_t* request, socket_t* conn) {
+int handle_client(request_t* request, socket_t* conn) {
     if(strncmp(request->uri, STATIC_URL_PREFIX, strlen(STATIC_URL_PREFIX)) == 0){
         return static_file_route(request, conn);
     }

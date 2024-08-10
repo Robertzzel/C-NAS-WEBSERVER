@@ -33,8 +33,9 @@ add_executable(untitled main.c
         utils/file.c
         utils/string_t.h
         utils/string_t.c
-        functional_utils/list.h
-        functional_utils/list.c
+        functional_utils/vector.h
+        IO/buffered_reader.c
+        IO/buffered_reader.h
 )
 add_compile_options(-Wall)
 target_link_libraries(untitled OpenSSL::SSL OpenSSL::Crypto)

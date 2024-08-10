@@ -4,7 +4,7 @@
 #include "routes.h"
 
 
-bool handle_download_route_post(http_request_t* request, socket_t* conn) {
+bool handle_download_route_post(request_t* request, socket_t* conn) {
     http_response_t response;
     http_response_t__new(&response);
     http_response_t__set_status(&response, 200);

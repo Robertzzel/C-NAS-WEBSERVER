@@ -1,7 +1,7 @@
 #include "routes.h"
 extern char* root_directory_path;
 
-bool handle_home_route_get(http_request_t* request, socket_t* conn) {
+bool handle_home_route_get(request_t* request, socket_t* conn) {
     char* path = string__from(request->uri + 6, strlen(request->uri + 6));
     if(!check_path(path)) {
         free(path);
@@ -36,7 +36,7 @@ bool handle_home_route_get(http_request_t* request, socket_t* conn) {
     return true;
 }
 
-bool handle_home_route_post(http_request_t* request, socket_t* conn) {
+bool handle_home_route_post(request_t* request, socket_t* conn) {
 
     return true;
 }

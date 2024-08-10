@@ -4,7 +4,7 @@
 
 #include "routes.h"
 
-bool static_file_route(http_request_t *request, socket_t *conn) {
+bool static_file_route(request_t *request, socket_t *conn) {
     bool success = check_path(request->uri);
     if(!success){
         return false;
