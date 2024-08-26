@@ -6,7 +6,7 @@
 #define UNTITLED_ROUTES_H
 
 #include "../error.h"
-#include "../http/http_request.h"
+#include "../http/request.h"
 #include "../http/http_response.h"
 #include "../html/html_files.h"
 #include "../utils/file_utils.h"
@@ -15,18 +15,13 @@
 #define STATIC_URL_PREFIX "/static/"
 #define STATIC_DIRECTORY "/home/robert/CLionProjects/untitled/static/"
 
-bool handle_root_route_get(request_t* request, socket_t* conn);
-
-bool handle_not_found_route_get(request_t* request, socket_t* conn);
-
-bool handle_login_route_get(request_t* request, socket_t* conn);
-bool handle_login_route_post(request_t* request, socket_t* conn);
-
-bool handle_home_route_get(request_t* request, socket_t* conn);
-bool handle_home_route_post(request_t* request, socket_t* conn);
-
-bool handle_download_route_post(request_t* request, socket_t* conn);
-
-bool static_file_route(request_t *request, socket_t *conn);
+bool handle_root_route_get(request_t* request, reader_t* conn);
+bool handle_not_found_route_get(request_t* request, reader_t* conn);
+bool handle_login_route_get(request_t* request, reader_t* conn);
+bool handle_login_route_post(request_t* request, reader_t* conn);
+bool handle_home_route_get(request_t* request, reader_t* conn);
+bool handle_home_route_post(request_t* request, reader_t* conn);
+bool handle_download_route_post(request_t* request, reader_t* conn);
+bool static_file_route(request_t *request, reader_t* conn);
 
 #endif //UNTITLED_ROUTES_H

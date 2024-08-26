@@ -8,6 +8,7 @@
 #define DEFAULT_BUFFER_SIZE 4096
 
 #include "socket_t.h"
+#include "../utils/bytes.h"
 
 typedef struct {
     socket_t* socket;
@@ -15,11 +16,13 @@ typedef struct {
     size_t read;
     size_t write;
     size_t buffer_size;
-} buffered_socket_t;
+} reader_t;
 
-buffered_socket_t* buffered_socket_new(socket_t* s);
-void buffered_socket_free(buffered_socket_t* reader);
-LIST(char)* buffered_socket_read(buffered_socket_t* reader, size_t max_read);
-LIST(char)* buffered_socket_read_until_or_max(buffered_socket_t* reader, char delim, size_t max_read) ;
+reader_t* reader_new(socket_t* s);
+void reader_free(reader_t* reader);
+bytes_t* reader_read(reader_t* reader, size_t max_read);
+bytes_t* reader_read_until(reader_t* reader, char delim, size_t max_read);
+int reader_write(reader_t* reader, bytes_t* bytes);
+int reader_write_buffer(reader_t* reader, void* bytes, size_t nr);
 
 #endif //UNTITLED_BUFFERED_READER_H

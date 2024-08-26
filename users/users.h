@@ -5,6 +5,7 @@
 #ifndef UNTITLED_USERS_H
 #define UNTITLED_USERS_H
 #include "../error.h"
+#include "string.h"
 #include <stdio.h>
 #include "openssl/sha.h"
 #include "stdbool.h"

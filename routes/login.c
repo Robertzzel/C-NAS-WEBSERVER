@@ -8,34 +8,48 @@
 
 
 
-bool handle_login_route_get(request_t* request, socket_t* conn) {
-    http_response_t response;
-    http_response_t__new(&response);
-    http_response_t__set_status(&response, 200);
-    http_response_t__add_header(&response, "Content-Type", "text/html; charset=UTF-8");
-    http_response_t__add_header(&response, "Connection", "close");
-    http_response_t__add_header(&response, "Access-Control-Allow-Origin", "*");
+bool handle_login_route_get(request_t * req, reader_t* conn) {
+    response_t response;
+    response_new(&response);
+    response_set_status(&response, 200);
+    response_add_header(&response, "Content-Type", "text/html; charset=UTF-8");
+    response_add_header(&response, "Connection", "close");
+    response_add_header(&response, "Access-Control-Allow-Origin", "*");
     response.body = get_login_page();
 
-    char* string = http_response_t__to_bytes(&response);
-    socket__write(conn, string, strlen(string));
+    char* string = response_to_bytes(&response);
 
-    http_response_t__free(&response);
+    bytes_t b = {.size = strlen(string), .data = string};
+    reader_write(conn, &b);
+
+    response_free(&response);
     free(string);
 
     return true;
 }
 
-bool handle_login_route_post(request_t* request, socket_t* conn) {
-    char *username= http_request_t___get_form_value(request, LOGIN_USERNAME_LABEL);
+bool handle_login_route_post(request_t* request, reader_t* conn) {
+    bytes_t* body_bytes = reader_read(conn, 128);
+    if(body_bytes == NULL){
+        return 0;
+    }
+
+    char* body_string = bytes_to_string(body_bytes);
+    bytes_free(body_bytes);
+    free(body_bytes);
+
+    char *username= request_form_value(body_string, LOGIN_USERNAME_LABEL);
     if(username == NULL){
+        free(body_string);
         return false;
     }
-    char *password= http_request_t___get_form_value(request, LOGIN_PASSWORD_LABEL);
+    char *password= request_form_value(body_string, LOGIN_PASSWORD_LABEL);
     if(password == NULL){
+        free(body_string);
         free(username);
         return false;
     }
+    free(body_string);
 
     bool user_exists = check_username_and_password(username, password);
     free(username);

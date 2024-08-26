@@ -8,8 +8,8 @@ find_package(OpenSSL REQUIRED)
 add_executable(untitled main.c
         IO/socket_t.c
         IO/socket_t.h
-        http/http_request.c
-        http/http_request.h
+        http/request.c
+        http/request.h
         utils/utils.c
         utils/utils.h
         http/http_response.c
@@ -33,9 +33,10 @@ add_executable(untitled main.c
         utils/file.c
         utils/string_t.h
         utils/string_t.c
-        functional_utils/vector.h
         IO/buffered_reader.c
         IO/buffered_reader.h
+        utils/bytes.c
+        utils/bytes.h
 )
 add_compile_options(-Wall)
 target_link_libraries(untitled OpenSSL::SSL OpenSSL::Crypto)

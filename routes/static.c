@@ -4,7 +4,7 @@
 
 #include "routes.h"
 
-bool static_file_route(request_t *request, socket_t *conn) {
+bool static_file_route(request_t *request, reader_t* conn) {
     bool success = check_path(request->uri);
     if(!success){
         return false;
@@ -49,31 +49,36 @@ bool static_file_route(request_t *request, socket_t *conn) {
     }
     free(full_file_path);
 
-    http_response_t response;
-    http_response_t__new(&response);
+    response_t response;
+    response_new(&response);
 
-    http_response_t__set_status(&response, 200);
-    http_response_t__add_header(&response, "Connection", "close");
-    http_response_t__add_header(&response, "Content-Type", content_type);
+    response_set_status(&response, 200);
+    response_add_header(&response, "Connection", "close");
+    response_add_header(&response, "Content-Type", content_type);
 
-    char* response_string = http_response_t__to_bytes(&response);
+    char* response_string = response_to_bytes(&response);
     if(response_string == NULL) {
-        http_response_t__free(&response);
+        response_free(&response);
         return false;
     }
 
-    socket__write(conn, response_string, strlen(response_string) - 2);
+    bytes_t b = {.size = strlen(response_string) - 2, .data = response_string};
+    reader_write(conn, &b);
 
     char buffer[1024];
     size_t bytes_read;
     while((bytes_read = fread(buffer, 1, 1024, f)) > 0){
-        socket__write(conn, buffer, bytes_read);
+        b.size = bytes_read;
+        b.data = buffer;
+        reader_write(conn, &b);
     }
 
-    socket__write(conn, "\r\n", 2);
+    b.size = 2;
+    b.data = "\r\n";
+    reader_write(conn, &b);
 
     free(response_string);
-    http_response_t__free(&response);
+    response_free(&response);
     fclose(f);
 
     return true;

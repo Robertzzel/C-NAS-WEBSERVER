@@ -4,33 +4,37 @@
 
 #include "http_response.h"
 
-void http_response_t__new(http_response_t* response){
+void response_new(response_t* response){
     response->body = NULL;
-    response->version = string__from("HTTP/1.1", strlen("HTTP/1.1"));
-    response->header_names = list_strings__new(3);
-    response->header_values = list_strings__new(3);
+    response->version = xstrdup("HTTP/1.1");
+    response->headers = xcalloc(1);
     response->status = 0;
 }
 
-void http_response_t__free(http_response_t* response){
+void response_free(response_t* response){
     if(response->body != NULL) {
         free(response->body);
     }
     if(response->version != NULL) {
         free(response->version);
     }
-    list_strings__free(response->header_names);
-    list_strings__free(response->header_values);
+    for (size_t i = 0; response->headers[i] != NULL ; ++i) {
+        for (size_t j = 0; response->headers[i][j] != NULL ; ++j) {
+            free(response->headers[i][j]);
+        }
+        free(response->headers[i]);
+    }
+    free(response->headers);
 }
 
-void http_response_t__set_version(http_response_t* response, char* version){
+void response_set_version(response_t* response, char* version){
     if(version != NULL) {
         free(response->version);
     }
-    response->version = string__from(version, strlen(version));
+    response->version = xstrdup(version);
 }
 
-bool http_response_t__set_status(http_response_t* response, int status){
+bool response_set_status(response_t* response, int status){
     if(status < 100 || status > 599) {
         return false;
     }
@@ -38,27 +42,31 @@ bool http_response_t__set_status(http_response_t* response, int status){
     return true;
 }
 
-void http_response_t__set_body(http_response_t* response, char* body){
+void response_set_body(response_t* response, char* body){
     if(response->body != NULL) {
         free(response->body);
     }
-    response->body = string__from(body, strlen(body));
+    response->body = xstrdup(body);
 }
 
-void http_response_t__add_header(http_response_t* response, char* name, char* value) {
-    for(int i=0; i<response->header_names->size; ++i){
-        char* header_name = list_strings__get(response->header_names, i);
-        if(strcmp(name, header_name) == 0) {
-            list_strings__replace(response->header_values, i, value);
+void response_add_header(response_t* response, char* name, char* value) {
+    int i;
+    for(i=0; response->headers[i] != NULL; ++i){
+        if(strcmp(name, response->headers[i][0]) == 0) {
+            free(response->headers[i][1]);
+            response->headers[i][1] = xstrdup(value);
             return;
         }
     }
 
-    list_strings__add(response->header_names, name);
-    list_strings__add(response->header_values, value);
+    response->headers = xrealloc(response->headers, (i + 2) * sizeof(char**));
+    response->headers[i] = xcalloc(3 * sizeof(char*));
+    response->headers[i][0] = xstrdup(name);
+    response->headers[i][1] = xstrdup(value);
+    response->headers[i+1] = 0;
 }
 
-char* http_response_t__to_bytes(http_response_t* response) {
+char* response_to_bytes(response_t* response) {
     unsigned long response_size = 0;
     // response line
     response_size += strlen(response->version) + 1;
@@ -66,10 +74,9 @@ char* http_response_t__to_bytes(http_response_t* response) {
     response_size += 2; // only OK message supported for now
     response_size += 2; // delimiter
     // headers
-    int i = 0;
-    for(i=0;i<response->header_names->size;++i){
-        char* name = list_strings__get(response->header_names, i);
-        char* value = list_strings__get(response->header_values, i);
+    for(int i=0;response->headers[i] != NULL;++i){
+        char* name = response->headers[i][0];
+        char* value = response->headers[i][1];
         response_size += strlen(name) + 2 + strlen(value);
         response_size += 2; // delimiter
     }
@@ -80,7 +87,7 @@ char* http_response_t__to_bytes(http_response_t* response) {
     }
     response_size += 2; // delimiter
 
-    char* result = string__new(response_size);
+    char* result = xcalloc(response_size + 1);
     strcat(result, response->version);
     strcat(result, " ");
     char status[4];
@@ -90,9 +97,9 @@ char* http_response_t__to_bytes(http_response_t* response) {
     strcat(result, "OK");
     strcat(result, "\r\n");
 
-    for(int i=0;i<response->header_names->size;++i){
-        char* name = list_strings__get(response->header_names, i);
-        char* value = list_strings__get(response->header_values, i);
+    for(int i=0;response->headers[i] != NULL;++i){
+        char* name = response->headers[i][0];
+        char* value = response->headers[i][1];
         strcat(result, name);
         strcat(result, ": ");
         strcat(result, value);

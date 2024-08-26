@@ -3,36 +3,40 @@
 //
 #include "routes.h"
 
+extern char* root_directory_path;
 
-bool handle_download_route_post(request_t* request, socket_t* conn) {
-    http_response_t response;
-    http_response_t__new(&response);
-    http_response_t__set_status(&response, 200);
-    http_response_t__add_header(&response, "Connection", "close");
-    http_response_t__add_header(&response, "Content-Type", "application/octet-stream");
-    http_response_t__add_header(&response, "Content-Disposition", "attachment; filename=\"hello\"");
-    char* string = http_response_t__to_bytes(&response);
+bool handle_download_route_post(request_t* request, reader_t* reader) {
+    char* uri_file_name = request->uri + strlen("/download/");
+    char* uri_file_name_end = strchr(request->uri, '?');
+    char* file_name = xstrndup(uri_file_name, uri_file_name_end - uri_file_name);
+
+    char* full_file_path = string__concatenate_strings(3, root_directory_path, "/", file_name);
+    free(file_name);
+
+    response_t response;
+    response_new(&response);
+    response_set_status(&response, 200);
+    response_add_header(&response, "Connection", "close");
+    response_add_header(&response, "Content-Type", "application/octet-stream");
+    response_add_header(&response, "Content-Disposition", "attachment; filename=\"hello\"");
+    char* string = response_to_bytes(&response);
     if(string == NULL) {
-        http_response_t__free(&response);
+        response_free(&response);
         return false;
     }
 
-    socket__write(conn, string, strlen(string) - 2);
+    reader_write_buffer( reader, string, strlen(string)-2);
 
-    list_string_t* files = list_strings__new(3);
+    char* files[] = {full_file_path, 0};
 
-    //char name1[] = "/home/robert/Downloads/kali-linux-2024.1-virtualbox-amd64.7z";
-    char name2[] = "/home/robert/Downloads/Sisteme de Prelucrare Grafica.rar";
-    //list_strings_t__add(&files, name1, strlen(name1));
-    list_strings__add(files, name2);
-    bool success = write_zip_to_socket(files, conn);
+    bool success = write_zip_to_socket(files, reader);
     if(!success){
+        response_free(&response);
         return false;
     }
 
-    list_strings__free(files);
     free(string);
-    http_response_t__free(&response);
+    response_free(&response);
 
     return true;
 }

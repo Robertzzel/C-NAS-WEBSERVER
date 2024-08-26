@@ -12,10 +12,6 @@
 #define READ_FILE_BUFFER (1024 * 16)
 
 
-list_string_t* get_files_from_directory() {
-    return NULL;
-}
-
 
 int64_t get_file_size(const char *filename) {
     FILE *file = fopen(filename, "rb");

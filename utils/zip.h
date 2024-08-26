@@ -9,6 +9,7 @@
 #include "utils.h"
 #include "../error.h"
 #include "stdbool.h"
+#include "../IO/buffered_reader.h"
 /*
  ZIP FILE STRUCTURE:
     LOCAL_FILE_HEADER1
@@ -38,6 +39,6 @@
 #define READ_FILE_BUFFER_SIZE (1024 * 8)
 
 
-bool write_zip_to_socket(list_string_t* file_paths, socket_t* socket);
+bool write_zip_to_socket(char** file_paths, reader_t* socket);
 
 #endif //UNTITLED_ZIP_H

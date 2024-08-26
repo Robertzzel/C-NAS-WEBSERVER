@@ -1,13 +1,10 @@
 #include "IO/socket_t.h"
-#include "http/http_request.h"
-#include "html/html_files.h"
-#include "routes/routes.h"
-#define BUFFER_SIZE 2048
+#include "http/request.h"
 
 #include "stdio.h"
 #include "IO/buffered_reader.h"
-#include "functional_utils/vector.h"
-int handle_client(request_t* request, socket_t* conn);
+#include "routes/routes.h"
+int handle_client(request_t* request, reader_t* conn);
 
 char* root_directory_path = NULL;
 
@@ -58,39 +55,28 @@ int main(int argc, char *argv[]) {
             continue;
         }
 
-        buffered_socket_t* reader = buffered_socket_new(client);
-
-        vector_t* v = buffered_socket_read(reader, 100);
-        if(v == NULL){
-            printf("Cannot read socket\n");
-            break;
-        }
-        vector_free(v);
-
-        v = buffered_socket_read_until_or_max(reader, '\n', 100);
-        if(v == NULL){
-            printf("Cannot read socket\n");
-            break;
-        }
+        reader_t * reader = reader_new(client);
 
         request_t* request = request_from_bytes(reader);
         if(request == NULL) {
             continue;
         }
 
-        vector_free(v);
-        handle_client(request, client);
+        handle_client(request, reader);
         socket__close(client);
-        http_request_t__free(request);
+        request_free(request);
+        reader_free(reader);
+        free(client);
     }
 
     socket__close(s);
     SSL_CTX_free(context);
+    free(s);
 
     return 0;
 }
 
-int handle_client(request_t* request, socket_t* conn) {
+int handle_client(request_t* request, reader_t* conn) {
     if(strncmp(request->uri, STATIC_URL_PREFIX, strlen(STATIC_URL_PREFIX)) == 0){
         return static_file_route(request, conn);
     }
@@ -112,8 +98,8 @@ int handle_client(request_t* request, socket_t* conn) {
 
     // LOGIN REQUIRED TO CONTINUE
 
-    if(strcmp(request->uri, "/download") == 0) {
-        if(strcmp(request->method, "POST") == 0) {
+    if(strncmp(request->uri, "/download", strlen("/download")) == 0) {
+        if(strcmp(request->method, "GET") == 0) {
             return handle_download_route_post(request, conn);
         }
     }

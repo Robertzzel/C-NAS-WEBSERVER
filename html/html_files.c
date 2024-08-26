@@ -12,21 +12,21 @@ char* get_home_page(list_file_t* files) {
         return file_contents;
     }
 
-    char* tag_replacement = string__new(0);
+    char* tag_replacement = xcalloc(1);
     for (int i = 0; i < files->size; ++i) {
         file_t* file = list_file_t__get(files, i);
         char* file_json = list_file_t__to_json(file);
-        char* file_json_with_ending_comma = string__append(file_json, ",", 1);
-        tag_replacement = string__append(tag_replacement, file_json_with_ending_comma, strlen(file_json_with_ending_comma));
+        tag_replacement = xrealloc(tag_replacement, strlen(tag_replacement) + strlen(file_json) + 2);
+        strcat(tag_replacement, file_json);
+        strcat(tag_replacement, ",");
         free(file_json);
-        free(file_json_with_ending_comma);
     }
 
     uint32_t size_of_file_before_tag = index_of_tag - file_contents;
     uint32_t size_of_file_after_tag = strlen(index_of_tag + strlen(tag_to_replace_with_files));
     size_t resultLength = size_of_file_before_tag + strlen(tag_replacement) + size_of_file_after_tag;
 
-    char* result = string__new(resultLength);
+    char* result = xcalloc(resultLength + 1);
     strncat(result, file_contents, size_of_file_before_tag);
     strcat(result, tag_replacement);
     strcat(result, index_of_tag + strlen(tag_to_replace_with_files));

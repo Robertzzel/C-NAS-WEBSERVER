@@ -45,7 +45,7 @@ void list_file_t__free(list_file_t* list) {
 }
 
 char* list_file_t__to_json(file_t* file) {
-    char* type_string = string__from(&file->type, 1);
+    char* type_string = strndup(&file->type, 1);
     char* result = string__concatenate_strings(6, "{\"name\":\"", file->name, "\",", "\"type\":\"", type_string, "\"}");
     free(type_string);
     return result;

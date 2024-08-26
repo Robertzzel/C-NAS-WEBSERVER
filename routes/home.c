@@ -1,15 +1,17 @@
 #include "routes.h"
 extern char* root_directory_path;
 
-bool handle_home_route_get(request_t* request, socket_t* conn) {
-    char* path = string__from(request->uri + 6, strlen(request->uri + 6));
-    if(!check_path(path)) {
-        free(path);
+bool handle_home_route_get(request_t* request, reader_t* conn) {
+    char* uri_file_name = request->uri + strlen("/home/");
+    char* uri_file_name_end = strchr(request->uri, '?');
+    char* file_name = uri_file_name_end == NULL? xstrdup(uri_file_name) : xstrndup(uri_file_name, uri_file_name_end - uri_file_name);
+    if(!check_path(file_name)) {
+        free(file_name);
         return false;
     }
 
-    char* full_file_path = string__concatenate_strings(3, root_directory_path, "/", path);
-    free(path);
+    char* full_file_path = string__concatenate_strings(3, root_directory_path, "/", file_name);
+    free(file_name);
 
     list_file_t* l = list_directory(full_file_path);
     if(l == NULL){
@@ -17,26 +19,27 @@ bool handle_home_route_get(request_t* request, socket_t* conn) {
     }
     free(full_file_path);
 
-    http_response_t response;
-    http_response_t__new(&response);
-    http_response_t__set_status(&response, 200);
-    http_response_t__add_header(&response, "Content-Type", "text/html; charset=UTF-8");
-    http_response_t__add_header(&response, "Connection", "close");
-    http_response_t__add_header(&response, "Access-Control-Allow-Origin", "*");
+    response_t response;
+    response_new(&response);
+    response_set_status(&response, 200);
+    response_add_header(&response, "Content-Type", "text/html; charset=UTF-8");
+    response_add_header(&response, "Connection", "close");
+    response_add_header(&response, "Access-Control-Allow-Origin", "*");
 
     char* body = get_home_page(l);
     list_file_t__free(l);
-    http_response_t__set_body(&response, body);
+    response_set_body(&response, body);
     free(body);
 
-    char* response_msg = http_response_t__to_bytes(&response);
-    socket__write(conn, response_msg, strlen(response_msg));
+    char* response_msg = response_to_bytes(&response);
+    bytes_t b = {.data = response_msg, .size = strlen(response_msg)};
+    reader_write(conn, &b);
     free(response_msg);
 
     return true;
 }
 
-bool handle_home_route_post(request_t* request, socket_t* conn) {
+bool handle_home_route_post(request_t* request, reader_t* conn) {
 
     return true;
 }

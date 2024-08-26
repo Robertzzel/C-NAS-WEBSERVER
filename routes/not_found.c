@@ -4,15 +4,17 @@
 
 #include "routes.h"
 
-bool handle_not_found_route_get(request_t* request, socket_t* conn) {
-    http_response_t response;
-    http_response_t__new(&response);
-    http_response_t__set_status(&response, 404);
-    http_response_t__add_header(&response, "Connection", "close");
-    char* string = http_response_t__to_bytes(&response);
+bool handle_not_found_route_get(request_t* request, reader_t* conn) {
+    response_t response;
+    response_new(&response);
+    response_set_status(&response, 404);
+    response_add_header(&response, "Connection", "close");
+    char* string = response_to_bytes(&response);
 
-    socket__write(conn, string, strlen(string));
+    bytes_t b = {.data = string, .size = strlen(string)};
+    reader_write(conn, &b);
+
     free(string);
-    http_response_t__free(&response);
+    response_free(&response);
     return true;
 }
